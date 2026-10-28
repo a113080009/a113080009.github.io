@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>青空下的約定：櫻花飄落的放學後 - Galgame</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=M+PLUS+Rounded+1c:wght@400;700;900&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      font-family: 'Kiwi Maru', 'Noto Serif TC', serif;
+      background: #0f0a17;
+      color: #fdf2f8;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+    .vn-glass {
+      background: rgba(18, 12, 28, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(254, 205, 211, 0.28);
+      box-shadow: 0 10px 35px -5px rgba(0, 0, 0, 0.75);
+    }
+    .vn-btn {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .vn-btn:hover {
+      transform: translateY(-2px);
+      border-color: #f472b6;
+      box-shadow: 0 0 15px rgba(244, 114, 182, 0.45);
+    }
+    .vn-btn:active {
+      transform: scale(0.97);
+    }
+    @keyframes breathing {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-4px) scale(1.006); }
+    }
+    .heroine-anim {
+      animation: breathing 4.5s ease-in-out infinite;
+      transform-origin: bottom center;
+    }
+    @keyframes floatHeart {
+      0% { opacity: 0; transform: translate(-50%, 0) scale(0.6); }
+      30% { opacity: 1; transform: translate(-50%, -25px) scale(1.2); }
+      100% { opacity: 0; transform: translate(-50%, -60px) scale(1); }
+    }
+    .heart-pop {
+      animation: floatHeart 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+    @keyframes titleGlow {
+      0%, 100% { text-shadow: 0 0 20px rgba(244,114,182,0.4), 0 0 40px rgba(236,72,153,0.2); }
+      50% { text-shadow: 0 0 35px rgba(244,114,182,0.8), 0 0 60px rgba(236,72,153,0.4); }
+    }
+    .title-glow {
+      animation: titleGlow 4s ease-in-out infinite;
+    }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+    ::-webkit-scrollbar-thumb { background: rgba(244,114,182,0.4); border-radius: 4px; }
+  </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center relative select-none">
+
+  <!-- MAIN CANVAS STAGE (Procedural Scene & Backgrounds) -->
+  <div id="gameViewport" class="relative w-full h-full max-w-[1280px] max-h-[720px] aspect-video overflow-hidden shadow-2xl bg-black">
+    <canvas id="bgCanvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+
+    <!-- CHARACTERS STAGE (SVG Vector Layer) -->
+    <div id="characterStage" class="absolute inset-0 z-10 pointer-events-none flex justify-center items-end px-8 pb-0">
+      <!-- Left Heroine (Shiori) -->
+      <div id="shioriSprite" class="heroine-anim relative w-[380px] h-[550px] transition-all duration-700 hidden opacity-0 translate-y-8">
+        <!-- SVG will be injected here -->
+      </div>
+      <!-- Right Heroine (Aoi) -->
+      <div id="aoiSprite" class="heroine-anim relative w-[390px] h-[560px] transition-all duration-700 hidden opacity-0 translate-y-8">
+        <!-- SVG will be injected here -->
+      </div>
+    </div>
+
+    <!-- AFFECTION POPUP NOTIFICATION -->
+    <div id="affectionToast" class="absolute top-8 left-1/2 -translate-x-1/2 z-40 pointer-events-none hidden">
+      <div class="heart-pop flex items-center gap-2 px-5 py-2.5 rounded-full bg-pink-950/80 border border-pink-400/60 shadow-[0_0_20px_rgba(244,114,182,0.6)] backdrop-blur-md">
+        <span class="text-pink-400 text-xl">♥</span>
+        <span id="affectionToastText" class="text-xs font-black tracking-wider text-pink-100">好感度上升！</span>
+      </div>
+    </div>
+
+    <!-- ================= SCREEN 1: TITLE SCREEN ================= -->
+    <div id="screenTitle" class="absolute inset-0 z-50 flex flex-col justify-between p-8 bg-gradient-to-t from-slate-950/80 via-transparent to-black/40">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-pink-950/40 border border-pink-400/30 text-pink-300 text-xs font-bold">
+          <span>🌸</span> 2026 原創純愛視覺小說
+        </div>
+        <button id="btnTitleAudio" class="vn-btn px-4 py-1.5 rounded-full vn-glass text-xs font-bold text-pink-200 flex items-center gap-2 border border-pink-500/30">
+          <span>🎵 音樂:</span><span id="titleAudioLabel">開</span>
+        </button>
+      </div>
+
+      <div class="flex flex-col items-center text-center my-auto">
+        <h1 class="text-4xl sm:text-6xl md:text-7xl font-black tracking-wider text-pink-100 title-glow mb-3">
+          青空下的約定
+        </h1>
+        <p class="text-lg sm:text-2xl font-medium tracking-widest text-pink-200/90 mb-10">
+          — 櫻花飄落的放學後 —
+        </p>
+
+        <div class="flex flex-col gap-3.5 w-60 sm:w-72">
+          <button id="btnStartGame" class="vn-btn py-3.5 px-6 rounded-2xl bg-gradient-to-r from-pink-500 via-rose-400 to-amber-300 text-slate-950 font-black text-base tracking-widest shadow-[0_0_25px_rgba(244,114,182,0.5)] border border-pink-200">
+            開始新篇章
+          </button>
+          <button id="btnOpenLoadFromTitle" class="vn-btn py-3 px-6 rounded-2xl vn-glass text-pink-200 font-bold text-sm tracking-widest border border-pink-400/30 hover:text-white">
+            讀取進度 (LOAD)
+          </button>
+          <button id="btnOpenGallery" class="vn-btn py-3 px-6 rounded-2xl vn-glass text-pink-200 font-bold text-sm tracking-widest border border-pink-400/30 hover:text-white">
+            回憶相簿 (CG GALLERY)
+          </button>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center text-[11px] text-pink-200/60 font-sans">
+        <span>PRODUCED BY GEMINI ENGINE · 純 HTML5 離線遊玩</span>
+        <span>分支結局數：4 (葵線 / 詩織線 / 友情線 / 獨自一人)</span>
+      </div>
+    </div>
+
+    <!-- ================= SCREEN 2: IN-GAME HUD & DIALOGUE ================= -->
+    <div id="screenInGame" class="absolute inset-0 z-20 flex flex-col justify-end p-4 sm:p-7 hidden">
+      <!-- Quick Options Header -->
+      <div class="absolute top-4 right-4 flex items-center gap-1.5 sm:gap-2 z-30">
+        <button id="btnQuickSave" class="vn-btn px-2.5 py-1 rounded-lg vn-glass text-[11px] font-bold text-pink-200 hover:text-white border border-pink-500/20">快存</button>
+        <button id="btnQuickLoad" class="vn-btn px-2.5 py-1 rounded-lg vn-glass text-[11px] font-bold text-pink-200 hover:text-white border border-pink-500/20">快讀</button>
+        <button id="btnOpenSave" class="vn-btn px-2.5 py-1 rounded-lg vn-glass text-[11px] font-bold text-pink-200 hover:text-white border border-pink-500/20">存檔</button>
+        <button id="btnOpenLoad" class="vn-btn px-2.5 py-1 rounded-lg vn-glass text-[11px] font-bold text-pink-200 hover:text-white border border-pink-500/20">讀檔</button>
+        <button id="btnOpenLog" class="vn-btn px-2.5 py-1 rounded-lg vn-glass text-[11px] font-bold text-pink-200 hover:text-white border border-pink-500/20">回顧</button>
+        <button id="btnAutoToggle" class="vn-btn px-2.5 py-1 rounded-lg vn-glass text-[11px] font-bold text-pink-200 hover:text-white border border-pink-500/20">
+          自動: <span id="autoStatusText" class="text-pink-400">關</span>
+        </button>
+        <button id="btnTitleReturn" class="vn-btn px-2.5 py-1 rounded-lg vn-glass text-[11px] font-bold text-rose-300 hover:text-rose-100 border border-rose-500/20">選單</button>
+      </div>
+
+      <!-- Top Left: Heroine Affection Status -->
+      <div class="absolute top-4 left-4 z-30 flex items-center gap-3">
+        <div class="flex items-center gap-1.5 px-3 py-1 rounded-full vn-glass border border-pink-500/30 text-xs">
+          <span class="text-pink-400 font-bold">葵 ♥</span>
+          <span id="hudAoiHearts" class="text-amber-300 font-black">0</span>
+        </div>
+        <div class="flex items-center gap-1.5 px-3 py-1 rounded-full vn-glass border border-sky-500/30 text-xs">
+          <span class="text-sky-300 font-bold">詩織 ♥</span>
+          <span id="hudShioriHearts" class="text-amber-300 font-black">0</span>
+        </div>
+      </div>
+
+      <!-- BRANCH CHOICES MODAL (Overlay) -->
+      <div id="choiceContainer" class="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 bg-black/50 backdrop-blur-sm hidden">
+        <div class="text-sm font-black text-pink-200 tracking-widest uppercase mb-5 px-4 py-1 rounded-full bg-pink-950/80 border border-pink-400/40">
+          【 命運的抉擇點 】
+        </div>
+        <div id="choiceList" class="flex flex-col gap-3.5 w-full max-w-md">
+          <!-- Dynamically populated buttons -->
+        </div>
+      </div>
+
+      <!-- DIALOGUE BOX -->
+      <div id="dialogueBox" class="w-full vn-glass rounded-2xl p-4 sm:p-6 border border-pink-300/30 relative cursor-pointer min-h-[145px] sm:min-h-[170px] flex flex-col justify-between">
+        <!-- Speaker Name Tag -->
+        <div id="namePlate" class="absolute -top-4 left-6 px-5 py-1 rounded-xl bg-gradient-to-r from-pink-600 to-rose-500 text-white font-black text-xs sm:text-sm tracking-wider shadow-lg border border-pink-300/50 flex items-center gap-1.5">
+          <span id="speakerName">旁白</span>
+        </div>
+
+        <!-- Dialogue Text Body -->
+        <div class="mt-2 text-sm sm:text-lg leading-relaxed sm:leading-loose text-pink-50 font-medium tracking-wide">
+          <span id="dialogueText"></span>
+          <span id="typewriterCursor" class="inline-block w-2 h-4 bg-pink-400 animate-pulse ml-1 align-middle"></span>
+        </div>
+
+        <!-- Bottom Action Bar / Prompt -->
+        <div class="flex justify-between items-center text-[10px] sm:text-xs text-pink-300/60 mt-2 font-sans">
+          <span>點擊畫面推進劇情 / 空白鍵繼續</span>
+          <div class="flex items-center gap-1 text-pink-300 animate-bounce">
+            <span>▼</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= SCREEN 3: BACKLOG MODAL ================= -->
+    <div id="modalLog" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden">
+      <div class="w-full max-w-2xl h-[80vh] vn-glass rounded-2xl p-5 border border-pink-400/40 flex flex-col">
+        <div class="flex justify-between items-center border-b border-pink-500/30 pb-3">
+          <h3 class="text-base font-black text-pink-200">對話紀錄 (BACKLOG)</h3>
+          <button id="btnCloseLog" class="text-pink-300 hover:text-white font-black text-sm px-2">✕ 關閉</button>
+        </div>
+        <div id="logContent" class="flex-1 overflow-y-auto py-4 space-y-3.5 pr-2">
+          <!-- Entries added here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= SCREEN 4: SAVE / LOAD MODAL ================= -->
+    <div id="modalSaveLoad" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden">
+      <div class="w-full max-w-2xl vn-glass rounded-2xl p-5 border border-pink-400/40 flex flex-col">
+        <div class="flex justify-between items-center border-b border-pink-500/30 pb-3">
+          <h3 id="saveLoadTitle" class="text-base font-black text-pink-200">記錄進度 (SAVE)</h3>
+          <button id="btnCloseSaveLoad" class="text-pink-300 hover:text-white font-black text-sm px-2">✕ 關閉</button>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 py-4">
+          <!-- 4 Slots -->
+          <div class="save-slot p-3 rounded-xl bg-slate-950/70 border border-pink-400/20 hover:border-pink-400 cursor-pointer flex flex-col justify-between min-h-[105px] transition" data-slot="1">
+            <div class="flex justify-between text-xs font-bold text-pink-300">
+              <span>進度槽 01</span>
+              <span class="slot-date text-slate-400">空白進度</span>
+            </div>
+            <p class="slot-preview text-xs text-slate-400 line-clamp-2 my-1.5">無存檔資料</p>
+            <div class="text-[10px] text-pink-400/70 slot-info">點擊覆蓋存檔</div>
+          </div>
+
+          <div class="save-slot p-3 rounded-xl bg-slate-950/70 border border-pink-400/20 hover:border-pink-400 cursor-pointer flex flex-col justify-between min-h-[105px] transition" data-slot="2">
+            <div class="flex justify-between text-xs font-bold text-pink-300">
+              <span>進度槽 02</span>
+              <span class="slot-date text-slate-400">空白進度</span>
+            </div>
+            <p class="slot-preview text-xs text-slate-400 line-clamp-2 my-1.5">無存檔資料</p>
+            <div class="text-[10px] text-pink-400/70 slot-info">點擊覆蓋存檔</div>
+          </div>
+
+          <div class="save-slot p-3 rounded-xl bg-slate-950/70 border border-pink-400/20 hover:border-pink-400 cursor-pointer flex flex-col justify-between min-h-[105px] transition" data-slot="3">
+            <div class="flex justify-between text-xs font-bold text-pink-300">
+              <span>進度槽 03</span>
+              <span class="slot-date text-slate-400">空白進度</span>
+            </div>
+            <p class="slot-preview text-xs text-slate-400 line-clamp-2 my-1.5">無存檔資料</p>
+            <div class="text-[10px] text-pink-400/70 slot-info">點擊覆蓋存檔</div>
+          </div>
+
+          <div class="save-slot p-3 rounded-xl bg-slate-950/70 border border-pink-400/20 hover:border-pink-400 cursor-pointer flex flex-col justify-between min-h-[105px] transition" data-slot="4">
+            <div class="flex justify-between text-xs font-bold text-pink-300">
+              <span>進度槽 04</span>
+              <span class="slot-date text-slate-400">空白進度</span>
+            </div>
+            <p class="slot-preview text-xs text-slate-400 line-clamp-2 my-1.5">無存檔資料</p>
+            <div class="text-[10px] text-pink-400/70 slot-info">點擊覆蓋存檔</div>
+          </div>
+        </div>
+
+        <div class="text-xs text-slate-400 text-center border-t border-pink-500/20 pt-2">
+          所有進度皆保存在本機瀏覽器 (localStorage) 中。
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= SCREEN 5: CG GALLERY MODAL ================= -->
+    <div id="modalGallery" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden">
+      <div class="w-full max-w-3xl vn-glass rounded-2xl p-6 border border-pink-400/40 flex flex-col max-h-[85vh]">
+        <div class="flex justify-between items-center border-b border-pink-500/30 pb-3">
+          <h3 class="text-base font-black text-pink-200">特別回憶相簿 (EVENT CG)</h3>
+          <button id="btnCloseGallery" class="text-pink-300 hover:text-white font-black text-sm px-2">✕ 關閉</button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 py-5 overflow-y-auto">
+          <!-- CG 1 -->
+          <div class="p-3 rounded-xl bg-slate-950/80 border border-pink-400/30 flex flex-col gap-2">
+            <div id="cgCard1" class="h-32 rounded-lg bg-slate-900 flex items-center justify-center text-slate-500 border border-slate-800 text-xs font-bold overflow-hidden relative">
+              <span class="cg-locked">🔒 尚未解鎖 (星野 葵 告白線)</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-bold text-pink-300">CG 01: 櫻花坡道下的告白</span>
+              <span id="cgStatus1" class="text-[10px] text-slate-400">未解鎖</span>
+            </div>
+          </div>
+
+          <!-- CG 2 -->
+          <div class="p-3 rounded-xl bg-slate-950/80 border border-sky-400/30 flex flex-col gap-2">
+            <div id="cgCard2" class="h-32 rounded-lg bg-slate-900 flex items-center justify-center text-slate-500 border border-slate-800 text-xs font-bold overflow-hidden relative">
+              <span class="cg-locked">🔒 尚未解鎖 (白石 詩織 圖書館線)</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-bold text-sky-300">CG 02: 金色夕照下的指尖相觸</span>
+              <span id="cgStatus2" class="text-[10px] text-slate-400">未解鎖</span>
+            </div>
+          </div>
+
+          <!-- CG 3 -->
+          <div class="p-3 rounded-xl bg-slate-950/80 border border-amber-400/30 flex flex-col gap-2">
+            <div id="cgCard3" class="h-32 rounded-lg bg-slate-900 flex items-center justify-center text-slate-500 border border-slate-800 text-xs font-bold overflow-hidden relative">
+              <span class="cg-locked">🔒 尚未解鎖 (夏日祭典星空)</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-bold text-amber-300">CG 03: 永恆的夏夜煙花</span>
+              <span id="cgStatus3" class="text-[10px] text-slate-400">未解鎖</span>
+            </div>
+          </div>
+
+          <!-- CG 4 -->
+          <div class="p-3 rounded-xl bg-slate-950/80 border border-purple-400/30 flex flex-col gap-2">
+            <div id="cgCard4" class="h-32 rounded-lg bg-slate-900 flex items-center justify-center text-slate-500 border border-slate-800 text-xs font-bold overflow-hidden relative">
+              <span class="cg-locked">🔒 尚未解鎖 (放學後的青空約定)</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-bold text-purple-300">CG 04: 青空下的羈絆協奏</span>
+              <span id="cgStatus4" class="text-[10px] text-slate-400">未解鎖</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT: WEB AUDIO SYNTHESIZER -->
+  <script>
+    class GalgameAudio {
+      constructor() {
+        this.ctx = null;
+        this.bgmPlaying = true;
+        this.bgmTimer = null;
+        this.melodyStep = 0;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      // Gentle romantic piano arpeggio loop
+      startBgm() {
+        if (!this.bgmPlaying) return;
+        this.init();
+        if (this.bgmTimer) return;
+
+        // Romantic pentatonic chord progression (C - G/B - Am - F)
+        const chords = [
+          [261.63, 329.63, 392.00, 523.25], // C
+          [246.94, 293.66, 392.00, 493.88], // G
+          [220.00, 261.63, 329.63, 440.00], // Am
+          [174.61, 220.00, 261.63, 349.23]  // F
+        ];
+
+        this.melodyStep = 0;
+        this.bgmTimer = setInterval(() => {
+          if (!this.bgmPlaying || !this.ctx) return;
+          const now = this.ctx.currentTime;
+          const chordIndex = Math.floor((this.melodyStep / 4) % chords.length);
+          const noteIndex = this.melodyStep % 4;
+          const freq = chords[chordIndex][noteIndex];
+
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+
+          gain.gain.setValueAtTime(0.04, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.85);
+
+          this.melodyStep++;
+        }, 340);
+      }
+      stopBgm() {
+        clearInterval(this.bgmTimer);
+        this.bgmTimer = null;
+      }
+      toggle() {
+        this.bgmPlaying = !this.bgmPlaying;
+        if (this.bgmPlaying) {
+          this.startBgm();
+        } else {
+          this.stopBgm();
+        }
+        return this.bgmPlaying;
+      }
+      // Typewriter tick
+      playType() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800 + Math.random() * 200, now);
+        gain.gain.setValueAtTime(0.015, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.04);
+      }
+      // Heart flutter sound
+      playAffection() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+          gain.gain.setValueAtTime(0.08, now + idx * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.3);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.07); osc.stop(now + idx * 0.07 + 0.3);
+        });
+      }
+      // Choice click chime
+      playSelect() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.18);
+      }
+    }
+    const audio = new GalgameAudio();
+  </script>
+
+  <!-- JAVASCRIPT: SVG ANIME SPRITE GENERATOR -->
+  <script>
+    // Procedural SVG Generator for Aoi Hoshino & Shiori Shiraishi
+    function renderAoiSVG(expression = 'normal') {
+      let mouth = '<path d="M185,255 Q195,263 205,255" stroke="#be185d" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+      let blush = '';
+      let eyes = `
+        <ellipse cx="170" cy="220" rx="9" ry="12" fill="#be185d"/>
+        <ellipse cx="168" cy="217" rx="3.5" ry="4.5" fill="#ffffff"/>
+        <ellipse cx="220" cy="220" rx="9" ry="12" fill="#be185d"/>
+        <ellipse cx="218" cy="217" rx="3.5" ry="4.5" fill="#ffffff"/>
+      `;
+
+      if (expression === 'smile') {
+        mouth = '<path d="M182,252 Q195,270 208,252 Z" fill="#f43f5e"/>';
+        eyes = `
+          <path d="M162,223 Q170,213 178,223" stroke="#881337" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M212,223 Q220,213 228,223" stroke="#881337" stroke-width="3" fill="none" stroke-linecap="round"/>
+        `;
+        blush = `
+          <ellipse cx="158" cy="236" rx="10" ry="5" fill="#fb7185" opacity="0.6"/>
+          <ellipse cx="232" cy="236" rx="10" ry="5" fill="#fb7185" opacity="0.6"/>
+        `;
+      } else if (expression === 'blush') {
+        mouth = '<path d="M188,256 Q195,258 202,256" stroke="#9f1239" stroke-width="3" fill="none" stroke-linecap="round"/>';
+        blush = `
+          <ellipse cx="155" cy="234" rx="14" ry="7" fill="#f43f5e" opacity="0.8"/>
+          <ellipse cx="235" cy="234" rx="14" ry="7" fill="#f43f5e" opacity="0.8"/>
+          <line x1="150" y1="232" x2="160" y2="236" stroke="#be123c" stroke-width="1.5"/>
+          <line x1="230" y1="232" x2="240" y2="236" stroke="#be123c" stroke-width="1.5"/>
+        `;
+      } else if (expression === 'surprised') {
+        mouth = '<ellipse cx="195" cy="258" rx="6" ry="8" fill="#f43f5e"/>';
+        eyes = `
+          <ellipse cx="170" cy="218" rx="10" ry="14" fill="#be185d"/>
+          <ellipse cx="168" cy="214" rx="4.5" ry="5.5" fill="#ffffff"/>
+          <ellipse cx="220" cy="218" rx="10" ry="14" fill="#be185d"/>
+          <ellipse cx="218" cy="214" rx="4.5" ry="5.5" fill="#ffffff"/>
+        `;
+      }
+
+      return `
+      <svg viewBox="0 0 390 560" class="w-full h-full drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
+        <!-- Back Twin Ribbons Hair -->
+        <path d="M120,180 Q80,260 95,390 Q125,350 140,240 Z" fill="#fb7185"/>
+        <path d="M270,180 Q310,260 295,390 Q265,350 250,240 Z" fill="#fb7185"/>
+
+        <!-- School Uniform Body -->
+        <path d="M145,330 L245,330 L275,560 L115,560 Z" fill="#1e293b"/> <!-- Navy Skirt/Torso -->
+        <path d="M150,330 L195,385 L240,330 L255,420 L135,420 Z" fill="#ffffff"/> <!-- White Sailor Blouse -->
+        <path d="M165,330 L195,370 L225,330 Z" fill="#0284c7"/> <!-- Sailor Collar -->
+        <path d="M188,365 L195,410 L202,365 Z" fill="#f43f5e"/> <!-- Red Scarf Ribbon -->
+
+        <!-- Arms -->
+        <path d="M135,335 Q110,410 130,470" stroke="#fed7aa" stroke-width="20" stroke-linecap="round" fill="none"/>
+        <path d="M255,335 Q280,410 260,470" stroke="#fed7aa" stroke-width="20" stroke-linecap="round" fill="none"/>
+
+        <!-- Neck -->
+        <path d="M182,280 L182,335 L208,335 L208,280 Z" fill="#fcd34d" opacity="0.3"/>
+        <path d="M183,280 L183,332 L207,332 L207,280 Z" fill="#fed7aa"/>
+
+        <!-- Head Base -->
+        <path d="M140,200 Q195,310 250,200 Q250,130 195,130 Q140,130 140,200 Z" fill="#ffedd5"/>
+
+        <!-- Face Details -->
+        ${eyes}
+        ${blush}
+        ${mouth}
+
+        <!-- Front Anime Bangs & Side Locks -->
+        <path d="M130,170 Q145,260 160,270 Q165,210 180,180 Q195,240 205,180 Q225,260 235,270 Q245,230 260,170 Q240,110 195,110 Q150,110 130,170 Z" fill="#fda4af"/>
+        <!-- Hair Highlights -->
+        <ellipse cx="195" cy="145" rx="45" ry="5" fill="#ffffff" opacity="0.45"/>
+
+        <!-- Red Ribbon Bows -->
+        <path d="M125,180 Q105,170 120,195 Z" fill="#e11d48"/>
+        <path d="M265,180 Q285,170 270,195 Z" fill="#e11d48"/>
+      </svg>
+      `;
+    }
+
+    function renderShioriSVG(expression = 'normal') {
+      let mouth = '<path d="M188,255 Q195,257 202,255" stroke="#3b82f6" stroke-width="2" fill="none" stroke-linecap="round"/>';
+      let blush = '';
+      let eyes = `
+        <ellipse cx="170" cy="220" rx="8" ry="11" fill="#1e40af"/>
+        <ellipse cx="168" cy="217" rx="3" ry="4" fill="#ffffff"/>
+        <ellipse cx="220" cy="220" rx="8" ry="11" fill="#1e40af"/>
+        <ellipse cx="218" cy="217" rx="3" ry="4" fill="#ffffff"/>
+      `;
+
+      if (expression === 'smile') {
+        mouth = '<path d="M185,253 Q195,264 205,253" stroke="#2563eb" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+        eyes = `
+          <path d="M163,222 Q170,215 177,222" stroke="#1e3a8a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M213,222 Q220,215 227,222" stroke="#1e3a8a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        `;
+        blush = `
+          <ellipse cx="160" cy="235" rx="9" ry="4" fill="#93c5fd" opacity="0.6"/>
+          <ellipse cx="230" cy="235" rx="9" ry="4" fill="#93c5fd" opacity="0.6"/>
+        `;
+      } else if (expression === 'blush') {
+        mouth = '<ellipse cx="195" cy="256" rx="4" ry="4" fill="#f43f5e"/>';
+        blush = `
+          <ellipse cx="158" cy="234" rx="12" ry="6" fill="#f472b6" opacity="0.7"/>
+          <ellipse cx="232" cy="234" rx="12" ry="6" fill="#f472b6" opacity="0.7"/>
+        `;
+      } else if (expression === 'sad') {
+        mouth = '<path d="M188,258 Q195,253 202,258" stroke="#3b82f6" stroke-width="2" fill="none" stroke-linecap="round"/>';
+        eyes = `
+          <ellipse cx="170" cy="222" rx="7" ry="9" fill="#1e40af"/>
+          <ellipse cx="220" cy="222" rx="7" ry="9" fill="#1e40af"/>
+        `;
+      }
+
+      return `
+      <svg viewBox="0 0 380 550" class="w-full h-full drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
+        <!-- Long Straight Dark-Navy Hair (Back) -->
+        <path d="M125,160 Q105,330 115,510 L265,510 Q275,330 255,160 Z" fill="#1e1b4b"/>
+
+        <!-- School Uniform Body (Cardigan Style) -->
+        <path d="M140,320 L240,320 L270,550 L110,550 Z" fill="#0f172a"/>
+        <path d="M145,320 L195,380 L235,320 L245,460 L135,460 Z" fill="#e2e8f0"/> <!-- Beige/White Knit -->
+        <path d="M175,320 L195,350 L215,320 Z" fill="#3b82f6"/> <!-- Ribbon Tie -->
+
+        <!-- Book in Hand -->
+        <rect x="160" y="410" width="60" height="75" rx="4" fill="#0284c7" transform="rotate(-5 190 440)"/>
+        <rect x="165" y="415" width="50" height="65" fill="#f8fafc" transform="rotate(-5 190 440)"/>
+
+        <!-- Neck -->
+        <path d="M183,280 L183,330 L207,330 L207,280 Z" fill="#fed7aa"/>
+
+        <!-- Head Base -->
+        <path d="M140,200 Q195,305 250,200 Q250,130 195,130 Q140,130 140,200 Z" fill="#ffedd5"/>
+
+        <!-- Thin Silver Eyeglasses -->
+        <rect x="155" y="210" width="30" height="18" rx="3" stroke="#94a3b8" stroke-width="1.8" fill="none"/>
+        <rect x="205" y="210" width="30" height="18" rx="3" stroke="#94a3b8" stroke-width="1.8" fill="none"/>
+        <line x1="185" y1="218" x2="205" y2="218" stroke="#94a3b8" stroke-width="1.8"/>
+
+        <!-- Face Details -->
+        ${eyes}
+        ${blush}
+        ${mouth}
+
+        <!-- Front Bangs & Hime Cut Side Hair -->
+        <path d="M130,170 Q130,280 135,320 Q145,280 150,200 Q170,220 195,190 Q220,220 240,200 Q245,280 255,320 Q260,280 260,170 Q240,105 195,105 Q150,105 130,170 Z" fill="#312e81"/>
+        <ellipse cx="195" cy="140" rx="40" ry="4" fill="#93c5fd" opacity="0.35"/>
+      </svg>
+      `;
+    }
+  </script>
+
+  <!-- JAVASCRIPT: CANVAS PROCEDURAL BACKGROUNDS & PETALS -->
+  <script>
+    class BackgroundRenderer {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.scene = 'sakura_slope'; // sakura_slope, classroom_sunset, night_festival
+        this.petals = [];
+        this.stars = [];
+        this.init();
+      }
+      init() {
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        for (let i = 0; i < 45; i++) {
+          this.petals.push({
+            x: Math.random() * this.canvas.width,
+            y: Math.random() * this.canvas.height,
+            sz: 6 + Math.random() * 8,
+            vx: 0.8 + Math.random() * 1.5,
+            vy: 0.9 + Math.random() * 1.6,
+            rot: Math.random() * Math.PI * 2,
+            vRot: (Math.random() - 0.5) * 0.05
+          });
+        }
+        for (let i = 0; i < 60; i++) {
+          this.stars.push({
+            x: Math.random() * this.canvas.width,
+            y: Math.random() * (this.canvas.height * 0.7),
+            r: 0.8 + Math.random() * 1.5,
+            alpha: Math.random()
+          });
+        }
+        this.animate();
+      }
+      resize() {
+        this.canvas.width = this.canvas.parentElement.clientWidth;
+        this.canvas.height = this.canvas.parentElement.clientHeight;
+      }
+      setScene(sceneName) {
+        this.scene = sceneName;
+      }
+      animate() {
+        this.render();
+        requestAnimationFrame(() => this.animate());
+      }
+      render() {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const ctx = this.ctx;
+
+        if (this.scene === 'sakura_slope') {
+          // Sunset Sky Gradient
+          const grad = ctx.createLinearGradient(0, 0, 0, h);
+          grad.addColorStop(0, '#f472b6');
+          grad.addColorStop(0.4, '#fb923c');
+          grad.addColorStop(0.75, '#fed7aa');
+          grad.addColorStop(1, '#64748b');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+
+          // Sun Orb
+          ctx.beginPath();
+          ctx.arc(w * 0.25, h * 0.45, 65, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 237, 213, 0.6)';
+          ctx.fill();
+
+          // Mountain Silhouette
+          ctx.beginPath();
+          ctx.moveTo(0, h * 0.75);
+          ctx.lineTo(w * 0.35, h * 0.6);
+          ctx.lineTo(w * 0.75, h * 0.78);
+          ctx.lineTo(w, h * 0.68);
+          ctx.lineTo(w, h);
+          ctx.lineTo(0, h);
+          ctx.fillStyle = '#475569';
+          ctx.fill();
+
+          // Slope Road
+          ctx.beginPath();
+          ctx.moveTo(0, h * 0.82);
+          ctx.lineTo(w, h * 0.95);
+          ctx.lineTo(w, h);
+          ctx.lineTo(0, h);
+          ctx.fillStyle = '#1e293b';
+          ctx.fill();
+
+          // Cherry Blossom Canopy Silhouette (Left & Right Branches)
+          ctx.fillStyle = '#be185d';
+          ctx.beginPath();
+          ctx.arc(0, 0, w * 0.35, 0, Math.PI * 2);
+          ctx.arc(w, 0, w * 0.28, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Render Falling Petals
+          ctx.fillStyle = '#fbcfe8';
+          this.petals.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rot += p.vRot;
+            if (p.x > w) p.x = -10;
+            if (p.y > h) p.y = -10;
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, p.sz, p.sz * 0.45, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          });
+        } else if (this.scene === 'classroom_sunset') {
+          // Warm Golden Classroom
+          const grad = ctx.createLinearGradient(0, 0, w, h);
+          grad.addColorStop(0, '#f97316');
+          grad.addColorStop(0.5, '#b45309');
+          grad.addColorStop(1, '#451a03');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+
+          // Window Frames & Sunlight Beams
+          ctx.fillStyle = 'rgba(254, 240, 138, 0.15)';
+          ctx.beginPath();
+          ctx.moveTo(w * 0.1, 0);
+          ctx.lineTo(w * 0.45, 0);
+          ctx.lineTo(w * 0.8, h);
+          ctx.lineTo(w * 0.3, h);
+          ctx.fill();
+
+          // Classroom Desks Silhouettes
+          ctx.fillStyle = 'rgba(28, 14, 6, 0.85)';
+          for (let i = 0; i < 3; i++) {
+            ctx.fillRect(w * 0.18 + i * 220, h * 0.65, 140, 18);
+            ctx.fillRect(w * 0.2 + i * 220, h * 0.65, 12, 110);
+            ctx.fillRect(w * 0.33 + i * 220, h * 0.65, 12, 110);
+          }
+        } else if (this.scene === 'night_festival') {
+          // Deep Starry Night Sky
+          const grad = ctx.createLinearGradient(0, 0, 0, h);
+          grad.addColorStop(0, '#090a1a');
+          grad.addColorStop(0.6, '#171633');
+          grad.addColorStop(1, '#2e1065');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+
+          // Stars Twinkle
+          ctx.fillStyle = '#ffffff';
+          this.stars.forEach(s => {
+            s.alpha += (Math.random() - 0.5) * 0.05;
+            if (s.alpha < 0.2) s.alpha = 0.2;
+            if (s.alpha > 1) s.alpha = 1;
+            ctx.globalAlpha = s.alpha;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.globalAlpha = 1.0;
+
+          // Festival Lanterns Glow
+          for (let i = 0; i < 6; i++) {
+            const lx = (w / 6) * i + 45;
+            const ly = 80 + Math.sin(i) * 15;
+            ctx.beginPath();
+            ctx.arc(lx, ly, 18, 0, Math.PI * 2);
+            ctx.fillStyle = '#f97316';
+            ctx.shadowColor = '#f97316';
+            ctx.shadowBlur = 25;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- JAVASCRIPT: SCRIPT DIALOGUE & STORY ENGINE -->
+  <script>
+    // Rich branching storyline in Traditional Chinese
+    const STORY_NODES = {
+      start: [
+        {
+          bg: 'sakura_slope',
+          speaker: '旁白',
+          text: '四月的風，揉碎了校門口漫天飛舞的櫻花。'
+        },
+        {
+          speaker: '旁白',
+          text: '放學鐘聲悠然迴盪，走在熟悉的歸途坂道上，空氣中瀰漫著初夏即將來臨的微溫。'
+        },
+        {
+          speaker: '？？？',
+          text: '「喂——！等等我啦，走那麼快做什麼！」'
+        },
+        {
+          speaker: '星野 葵',
+          heroine: 'aoi',
+          emotion: 'smile',
+          text: '身後傳來輕快急促的腳步聲。青梅竹馬的葵快步追了上來，雙馬尾的紅色髮帶在夕風中微微晃動。'
+        },
+        {
+          speaker: '星野 葵',
+          heroine: 'aoi',
+          emotion: 'normal',
+          text: '「真是的，明知道今天是我值日，竟然打算一個人先溜回去嗎？」'
+        },
+        {
+          speaker: '主角',
+          text: '「沒有啦，只是在想下週模擬考的事情……」'
+        },
+        {
+          speaker: '星野 葵',
+          heroine: 'aoi',
+          emotion: 'blush',
+          text: '「少找藉口啦！對了……那個，等一下要不要順路去神社後面的櫻花林道？聽說那裡的黃昏很美……」'
+        },
+        {
+          speaker: '旁白',
+          text: '就在這時，手機突然震動了一下。打開看，是圖書館委員會的白石學姊傳來的訊息：'
+        },
+        {
+          speaker: '訊息',
+          text: '『學弟，之前你委託找的那本絕版詩集已經找到了。我現在在舊校舍圖書室，方便過來一趟嗎？』'
+        },
+        {
+          isChoice: true,
+          prompt: '面對葵的邀約與詩織學姊的訊息，你決定……',
+          choices: [
+            { text: '陪葵一起去櫻花林道散步', next: 'route_aoi_1', heroine: 'aoi' },
+            { text: '前往圖書館找詩織學姊拿書', next: 'route_shiori_1', heroine: 'shiori' },
+            { text: '兩邊都婉拒，今天還是早點回家複習吧', next: 'route_alone' }
+          ]
+        }
+      ],
+
+      // ========= AOI ROUTE =========
+      route_aoi_1: [
+        {
+          bg: 'sakura_slope',
+          heroine: 'aoi',
+          emotion: 'smile',
+          affection: { heroine: 'aoi', amount: 1 },
+          speaker: '主角',
+          text: '「走吧，既然葵都開口了，怎麼能拒絕呢。」'
+        },
+        {
+          heroine: 'aoi',
+          emotion: 'blush',
+          speaker: '星野 葵',
+          text: '「太好了！嘿嘿，我就知道你最講義氣了！」'
+        },
+        {
+          heroine: 'aoi',
+          emotion: 'normal',
+          speaker: '旁白',
+          text: '並肩走在飄零的櫻花林間，葵的手指不經意觸碰到我的手背，隨後又害羞地縮了回去。'
+        },
+        {
+          heroine: 'aoi',
+          emotion: 'blush',
+          speaker: '星野 葵',
+          text: '「吶……你還記得小時候，我們也是在這裡約定過要一起考上這所高中的嗎？」'
+        },
+        {
+          speaker: '主角',
+          text: '「當然記得。那時妳還哭著說怕跟我分開呢。」'
+        },
+        {
+          heroine: 'aoi',
+          emotion: 'surprised',
+          speaker: '星野 葵',
+          text: '「笨蛋！不許提小時候的黑歷史啦！」'
+        },
+        {
+          isChoice: true,
+          prompt: '看著臉色緋紅的葵，你心中的真實想法是……',
+          choices: [
+            { text: '「因為那是我們無可取代的寶貴回憶啊。」', next: 'route_aoi_confess', heroine: 'aoi' },
+            { text: '「好啦好啦，我們永遠是最好的青梅竹馬。」', next: 'route_aoi_friend' }
+          ]
+        }
+      ],
+
+      route_aoi_confess: [
+        {
+          bg: 'sakura_slope',
+          heroine: 'aoi',
+          emotion: 'blush',
+          affection: { heroine: 'aoi', amount: 2 },
+          unlockCG: 1,
+          speaker: '星野 葵',
+          text: '「無可取代……嗎？那、那麼……如果我說……」'
+        },
+        {
+          heroine: 'aoi',
+          emotion: 'smile',
+          speaker: '星野 葵',
+          text: '夕陽將她的臉龐映得無比溫柔。葵深吸了一口氣，主動牽住了我的手。'
+        },
+        {
+          heroine: 'aoi',
+          emotion: 'blush',
+          speaker: '星野 葵',
+          text: '「我不想只做青梅竹馬了……從很早以前開始，我的眼裡就只有你一個人了！」'
+        },
+        {
+          speaker: '旁白',
+          text: '漫天飛舞的花瓣作證，我們在青空與夕暮的交界處，交換了屬於彼此的第一個誓約。'
+        },
+        {
+          speaker: '結局宣告',
+          text: '【TRUE ENDING 1：夕暮下的永恆櫻約 (星野 葵 戀人線達成)】'
+        }
+      ],
+
+      route_aoi_friend: [
+        {
+          bg: 'sakura_slope',
+          heroine: 'aoi',
+          emotion: 'normal',
+          speaker: '星野 葵',
+          text: '「……是呢。最要好的青梅竹馬……」'
+        },
+        {
+          heroine: 'aoi',
+          emotion: 'smile',
+          speaker: '星野 葵',
+          text: '葵露出了些許寂寞但釋懷的微笑，輕輕拍了拍我的肩膀。'
+        },
+        {
+          speaker: '結局宣告',
+          text: '【NORMAL ENDING：青空下的摯友長青】'
+        }
+      ],
+
+      // ========= SHIORI ROUTE =========
+      route_shiori_1: [
+        {
+          bg: 'classroom_sunset',
+          heroine: 'shiori',
+          emotion: 'normal',
+          affection: { heroine: 'shiori', amount: 1 },
+          speaker: '旁白',
+          text: '婉拒了葵後，我快步來到了黃昏籠罩的舊校舍圖書室。'
+        },
+        {
+          heroine: 'shiori',
+          emotion: 'normal',
+          speaker: '白石 詩織',
+          text: '推開門，靜謐的書香與落塵迎面而來。詩織學姊坐在靠窗的位置，金色的夕照穿透窗櫺，在她白皙的肌膚上灑落斑駁光影。'
+        },
+        {
+          heroine: 'shiori',
+          emotion: 'smile',
+          speaker: '白石 詩織',
+          text: '「你來了……請坐。你要找的詩集，我放在第一排書架上。」'
+        },
+        {
+          heroine: 'shiori',
+          emotion: 'normal',
+          speaker: '主角',
+          text: '「謝謝學姊！這本書找了好久都沒找到，真是幫了大忙。」'
+        },
+        {
+          heroine: 'shiori',
+          emotion: 'blush',
+          speaker: '白石 詩織',
+          text: '「沒什麼……只要能幫上你的忙就好。其實……平時圖書室只有我一個人，今天你能來，我很開心。」'
+        },
+        {
+          isChoice: true,
+          prompt: '學姊遞過書本時，兩人的指尖輕輕相觸。你……',
+          choices: [
+            { text: '順勢握住學姊微涼的手，凝視著她的眼眸', next: 'route_shiori_confess', heroine: 'shiori' },
+            { text: '禮貌地接過書本並拉開適當距離', next: 'route_shiori_friend' }
+          ]
+        }
+      ],
+
+      route_shiori_confess: [
+        {
+          bg: 'classroom_sunset',
+          heroine: 'shiori',
+          emotion: 'blush',
+          affection: { heroine: 'shiori', amount: 2 },
+          unlockCG: 2,
+          speaker: '白石 詩織',
+          text: '「學、學弟……？」'
+        },
+        {
+          heroine: 'shiori',
+          emotion: 'blush',
+          speaker: '白石 詩織',
+          text: '詩織學姊的眼鏡後方，原本淡然的眼眸泛起了水霧與動搖的羞意。'
+        },
+        {
+          speaker: '主角',
+          text: '「我來這裡不只是為了借書……更是因為想見到學姊。」'
+        },
+        {
+          heroine: 'shiori',
+          emotion: 'smile',
+          speaker: '白石 詩織',
+          text: '「笨蛋……這樣直白的話，會讓我無法集中精神看書的……不過……我很高興喔。」'
+        },
+        {
+          speaker: '旁白',
+          text: '夕陽將書架映成深金褐色。在寂靜的圖書館角落，兩顆平素安靜的心緊緊相依。'
+        },
+        {
+          speaker: '結局宣告',
+          text: '【TRUE ENDING 2：書頁間的夕陽私語 (白石 詩織 戀人線達成)】'
+        }
+      ],
+
+      route_shiori_friend: [
+        {
+          bg: 'classroom_sunset',
+          heroine: 'shiori',
+          emotion: 'smile',
+          speaker: '白石 詩織',
+          text: '「那麼，這本書就借給你兩週。讀完若有心得，隨時歡迎跟我討論。」'
+        },
+        {
+          speaker: '結局宣告',
+          text: '【NORMAL ENDING：靜謐的閱讀時光】'
+        }
+      ],
+
+      // ========= ALONE ROUTE =========
+      route_alone: [
+        {
+          bg: 'night_festival',
+          speaker: '旁白',
+          text: '拒絕了所有的邀約，一個人揹著書包默默走回了家。'
+        },
+        {
+          speaker: '旁白',
+          text: '夜幕低垂，窗外的夏夜星空依舊璀璨，然而心中卻莫名升起了一絲無法名狀的落寞……'
+        },
+        {
+          speaker: '結局宣告',
+          text: '【BAD / LONELY ENDING：錯過的青春詩篇】'
+        }
+      ]
+    };
+  </script>
+
+  <!-- JAVASCRIPT: VN CORE ENGINE & UI LOGIC -->
+  <script>
+    class GalgameEngine {
+      constructor() {
+        this.bgRenderer = new BackgroundRenderer(document.getElementById('bgCanvas'));
+        this.currentNodeKey = 'start';
+        this.currentIndex = 0;
+        this.typewriterTimer = null;
+        this.isTyping = false;
+        this.fullText = '';
+        this.autoPlay = false;
+        this.autoTimer = null;
+
+        // Affection stats
+        this.affection = { aoi: 0, shiori: 0 };
+        this.backlog = [];
+        this.unlockedCGs = JSON.parse(localStorage.getItem('azure_sky_cgs') || '[]');
+
+        this.initUI();
+      }
+
+      initUI() {
+        // Start Game
+        document.getElementById('btnStartGame').addEventListener('click', () => {
+          audio.init();
+          audio.startBgm();
+          document.getElementById('screenTitle').classList.add('hidden');
+          document.getElementById('screenInGame').classList.remove('hidden');
+          this.loadNode('start');
+        });
+
+        // BGM Switch on Title
+        document.getElementById('btnTitleAudio').addEventListener('click', () => {
+          const on = audio.toggle();
+          document.getElementById('titleAudioLabel').innerText = on ? '開' : '關';
+        });
+
+        // Click on Textbox to Advance
+        document.getElementById('dialogueBox').addEventListener('click', () => this.advance());
+        window.addEventListener('keydown', (e) => {
+          if (e.code === 'Space' || e.code === 'Enter') {
+            e.preventDefault();
+            this.advance();
+          }
+        });
+
+        // Quick Controls
+        document.getElementById('btnAutoToggle').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.autoPlay = !this.autoPlay;
+          document.getElementById('autoStatusText').innerText = this.autoPlay ? '開' : '關';
+          if (this.autoPlay && !this.isTyping) this.scheduleAuto();
+        });
+
+        document.getElementById('btnTitleReturn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.getElementById('screenInGame').classList.add('hidden');
+          document.getElementById('screenTitle').classList.remove('hidden');
+        });
+
+        // Backlog Modal
+        document.getElementById('btnOpenLog').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.renderLog();
+          document.getElementById('modalLog').classList.remove('hidden');
+        });
+        document.getElementById('btnCloseLog').addEventListener('click', () => {
+          document.getElementById('modalLog').classList.add('hidden');
+        });
+
+        // Save & Load Modals
+        document.getElementById('btnOpenSave').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.openSaveLoadModal('save');
+        });
+        document.getElementById('btnOpenLoad').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.openSaveLoadModal('load');
+        });
+        document.getElementById('btnOpenLoadFromTitle').addEventListener('click', () => {
+          this.openSaveLoadModal('load');
+        });
+        document.getElementById('btnQuickSave').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.saveToSlot(1);
+          this.showToast('已完成快捷存檔 (進度槽 01)');
+        });
+        document.getElementById('btnQuickLoad').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.loadFromSlot(1);
+          this.showToast('已讀取快捷進度');
+        });
+        document.getElementById('btnCloseSaveLoad').addEventListener('click', () => {
+          document.getElementById('modalSaveLoad').classList.add('hidden');
+        });
+
+        // Gallery Modal
+        document.getElementById('btnOpenGallery').addEventListener('click', () => {
+          this.updateGalleryUI();
+          document.getElementById('modalGallery').classList.remove('hidden');
+        });
+        document.getElementById('btnCloseGallery').addEventListener('click', () => {
+          document.getElementById('modalGallery').classList.add('hidden');
+        });
+
+        // Slots Click Listener
+        document.querySelectorAll('.save-slot').forEach(slot => {
+          slot.addEventListener('click', () => {
+            const slotId = slot.dataset.slot;
+            if (this.saveLoadMode === 'save') {
+              this.saveToSlot(slotId);
+              this.updateSlotsDisplay();
+              this.showToast(`存檔至槽位 ${slotId} 成功`);
+            } else {
+              this.loadFromSlot(slotId);
+              document.getElementById('modalSaveLoad').classList.add('hidden');
+            }
+          });
+        });
+
+        this.updateGalleryUI();
+      }
+
+      showToast(msg) {
+        const toast = document.getElementById('affectionToast');
+        const txt = document.getElementById('affectionToastText');
+        txt.innerText = msg;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 1800);
+      }
+
+      loadNode(nodeKey, startIndex = 0) {
+        this.currentNodeKey = nodeKey;
+        this.currentIndex = startIndex;
+        this.renderStep();
+      }
+
+      renderStep() {
+        const list = STORY_NODES[this.currentNodeKey];
+        if (!list || this.currentIndex >= list.length) return;
+
+        const current = list[this.currentIndex];
+
+        // 1. Handle Choices
+        if (current.isChoice) {
+          this.displayChoices(current.prompt, current.choices);
+          return;
+        }
+
+        // 2. Change Background
+        if (current.bg) {
+          this.bgRenderer.setScene(current.bg);
+        }
+
+        // 3. Affection Trigger
+        if (current.affection) {
+          this.affection[current.affection.heroine] += current.affection.amount;
+          audio.playAffection();
+          this.showToast(`${current.affection.heroine === 'aoi' ? '星野 葵' : '白石 詩織'} 好感度 +${current.affection.amount}！`);
+          document.getElementById('hudAoiHearts').innerText = this.affection.aoi;
+          document.getElementById('hudShioriHearts').innerText = this.affection.shiori;
+        }
+
+        // 4. CG Unlock Trigger
+        if (current.unlockCG) {
+          if (!this.unlockedCGs.includes(current.unlockCG)) {
+            this.unlockedCGs.push(current.unlockCG);
+            localStorage.setItem('azure_sky_cgs', JSON.stringify(this.unlockedCGs));
+            this.updateGalleryUI();
+            this.showToast(`🌸 解鎖新特別回憶 CG 0${current.unlockCG}！`);
+          }
+        }
+
+        // 5. Update Characters
+        this.updateCharacterSprites(current.heroine, current.emotion);
+
+        // 6. Speaker Nameplate
+        const namePlate = document.getElementById('namePlate');
+        const speaker = document.getElementById('speakerName');
+        speaker.innerText = current.speaker;
+        if (current.speaker === '旁白' || current.speaker === '訊息') {
+          namePlate.classList.add('opacity-0');
+        } else {
+          namePlate.classList.remove('opacity-0');
+        }
+
+        // 7. Typewriter Text
+        this.fullText = current.text;
+        this.startTypewriter(current.text);
+
+        // 8. Push to Log
+        this.backlog.push({ speaker: current.speaker, text: current.text });
+      }
+
+      startTypewriter(text) {
+        clearInterval(this.typewriterTimer);
+        this.isTyping = true;
+        let charIndex = 0;
+        const target = document.getElementById('dialogueText');
+        target.innerText = '';
+
+        this.typewriterTimer = setInterval(() => {
+          target.innerText += text[charIndex];
+          audio.playType();
+          charIndex++;
+          if (charIndex >= text.length) {
+            clearInterval(this.typewriterTimer);
+            this.isTyping = false;
+            if (this.autoPlay) this.scheduleAuto();
+          }
+        }, 32);
+      }
+
+      finishTypewriter() {
+        clearInterval(this.typewriterTimer);
+        document.getElementById('dialogueText').innerText = this.fullText;
+        this.isTyping = false;
+        if (this.autoPlay) this.scheduleAuto();
+      }
+
+      scheduleAuto() {
+        clearTimeout(this.autoTimer);
+        this.autoTimer = setTimeout(() => {
+          if (this.autoPlay) this.advance();
+        }, 1900);
+      }
+
+      advance() {
+        if (this.isTyping) {
+          this.finishTypewriter();
+          return;
+        }
+
+        const list = STORY_NODES[this.currentNodeKey];
+        if (this.currentIndex + 1 < list.length) {
+          this.currentIndex++;
+          this.renderStep();
+        }
+      }
+
+      updateCharacterSprites(heroine, emotion) {
+        const aoi = document.getElementById('aoiSprite');
+        const shiori = document.getElementById('shioriSprite');
+
+        if (heroine === 'aoi') {
+          aoi.innerHTML = renderAoiSVG(emotion || 'normal');
+          aoi.classList.remove('hidden');
+          setTimeout(() => aoi.classList.remove('opacity-0', 'translate-y-8'), 20);
+          shiori.classList.add('opacity-0', 'translate-y-8');
+          setTimeout(() => shiori.classList.add('hidden'), 500);
+        } else if (heroine === 'shiori') {
+          shiori.innerHTML = renderShioriSVG(emotion || 'normal');
+          shiori.classList.remove('hidden');
+          setTimeout(() => shiori.classList.remove('opacity-0', 'translate-y-8'), 20);
+          aoi.classList.add('opacity-0', 'translate-y-8');
+          setTimeout(() => aoi.classList.add('hidden'), 500);
+        } else {
+          aoi.classList.add('opacity-0', 'translate-y-8');
+          shiori.classList.add('opacity-0', 'translate-y-8');
+          setTimeout(() => {
+            aoi.classList.add('hidden');
+            shiori.classList.add('hidden');
+          }, 500);
+        }
+      }
+
+      displayChoices(prompt, choices) {
+        const modal = document.getElementById('choiceContainer');
+        const list = document.getElementById('choiceList');
+        list.innerHTML = '';
+
+        choices.forEach(ch => {
+          const btn = document.createElement('button');
+          btn.className = 'vn-btn py-3 px-5 rounded-xl vn-glass border border-pink-400/40 text-left font-bold text-sm sm:text-base text-pink-100 hover:text-white hover:border-pink-300 shadow-lg';
+          btn.innerText = ch.text;
+          btn.addEventListener('click', () => {
+            audio.playSelect();
+            modal.classList.add('hidden');
+            this.loadNode(ch.next, 0);
+          });
+          list.appendChild(btn);
+        });
+
+        modal.classList.remove('hidden');
+      }
+
+      renderLog() {
+        const box = document.getElementById('logContent');
+        box.innerHTML = '';
+        this.backlog.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'p-3 rounded-lg bg-black/40 border border-pink-500/20 text-xs sm:text-sm';
+          row.innerHTML = `<span class="text-pink-400 font-bold mr-2">${item.speaker}:</span><span class="text-pink-100">${item.text}</span>`;
+          box.appendChild(row);
+        });
+        box.scrollTop = box.scrollHeight;
+      }
+
+      openSaveLoadModal(mode) {
+        this.saveLoadMode = mode;
+        document.getElementById('saveLoadTitle').innerText = mode === 'save' ? '記錄進度 (SAVE)' : '讀取進度 (LOAD)';
+        this.updateSlotsDisplay();
+        document.getElementById('modalSaveLoad').classList.remove('hidden');
+      }
+
+      updateSlotsDisplay() {
+        for (let i = 1; i <= 4; i++) {
+          const raw = localStorage.getItem(`azure_sky_slot_${i}`);
+          const card = document.querySelector(`.save-slot[data-slot="${i}"]`);
+          if (raw) {
+            const data = JSON.parse(raw);
+            card.querySelector('.slot-date').innerText = data.date;
+            card.querySelector('.slot-preview').innerText = data.preview;
+            card.querySelector('.slot-info').innerText = `好感度: 葵(${data.affection.aoi}) 詩織(${data.affection.shiori})`;
+          } else {
+            card.querySelector('.slot-date').innerText = '空白進度';
+            card.querySelector('.slot-preview').innerText = '無存檔資料';
+            card.querySelector('.slot-info').innerText = this.saveLoadMode === 'save' ? '點擊儲存' : '無法讀取';
+          }
+        }
+      }
+
+      saveToSlot(slotId) {
+        const data = {
+          nodeKey: this.currentNodeKey,
+          index: this.currentIndex,
+          affection: this.affection,
+          preview: this.fullText,
+          date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        };
+        localStorage.setItem(`azure_sky_slot_${slotId}`, JSON.stringify(data));
+      }
+
+      loadFromSlot(slotId) {
+        const raw = localStorage.getItem(`azure_sky_slot_${slotId}`);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        this.affection = data.affection;
+        document.getElementById('hudAoiHearts').innerText = this.affection.aoi;
+        document.getElementById('hudShioriHearts').innerText = this.affection.shiori;
+        document.getElementById('screenTitle').classList.add('hidden');
+        document.getElementById('screenInGame').classList.remove('hidden');
+        this.loadNode(data.nodeKey, data.index);
+      }
+
+      updateGalleryUI() {
+        const cgs = [
+          { id: 1, name: '櫻花坡道下的告白', color: 'from-pink-500 to-rose-400' },
+          { id: 2, name: '金色夕照下的指尖相觸', color: 'from-sky-500 to-amber-300' },
+          { id: 3, name: '永恆的夏夜煙花', color: 'from-purple-600 to-indigo-400' },
+          { id: 4, name: '青空下的羈絆協奏', color: 'from-cyan-400 to-pink-400' }
+        ];
+
+        cgs.forEach(item => {
+          const unlocked = this.unlockedCGs.includes(item.id);
+          const card = document.getElementById(`cgCard${item.id}`);
+          const status = document.getElementById(`cgStatus${item.id}`);
+
+          if (unlocked) {
+            card.innerHTML = `<div class="w-full h-full bg-gradient-to-tr ${item.color} flex items-center justify-center text-slate-950 font-black text-sm tracking-wider shadow-inner">✨ ${item.name}</div>`;
+            status.innerText = '已解鎖';
+            status.className = 'text-[10px] text-pink-400 font-bold';
+          }
+        });
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new GalgameEngine();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>部落攻防戰：莊園掠奪者 - Clash Village Raid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+TC:wght@500;700;900&family=Rowdies:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      font-family: 'Rowdies', 'Noto Sans TC', system-ui, sans-serif;
+      background: #111b11;
+      color: #fff;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .clash-glass {
+      background: rgba(18, 25, 18, 0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 2px solid rgba(234, 179, 8, 0.4);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+    }
+    .clash-btn {
+      position: relative;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 0 #92400e, 0 8px 15px rgba(0,0,0,0.5);
+      transition: all 0.1s ease;
+    }
+    .clash-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #92400e, 0 3px 6px rgba(0,0,0,0.5);
+    }
+    .troop-card {
+      transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s ease;
+    }
+    .troop-card:hover {
+      transform: translateY(-4px) scale(1.03);
+    }
+    .troop-card.selected {
+      transform: translateY(-8px) scale(1.06);
+      border-color: #facc15 !important;
+      box-shadow: 0 0 20px rgba(250, 204, 21, 0.8) !important;
+    }
+    .troop-card.disabled {
+      opacity: 0.45;
+      filter: grayscale(80%);
+      pointer-events: none;
+      transform: none !important;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.6)); }
+      50% { filter: drop-shadow(0 0 18px rgba(250, 204, 21, 1)); }
+    }
+    .star-glow {
+      animation: pulseGlow 1.5s infinite;
+    }
+  </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center relative overflow-hidden bg-stone-950">
+
+  <!-- TOP HEADER HUD (Loot, Destruction %, Timer, Stars) -->
+  <header id="battleHud" class="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-3 sm:px-6 py-2.5 bg-gradient-to-b from-black/85 via-black/50 to-transparent pointer-events-none">
+    <!-- Left: Loot Stolen -->
+    <div class="flex items-center gap-2 sm:gap-4 pointer-events-auto">
+      <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl clash-glass border-amber-500/40">
+        <span class="text-xl leading-none">🪙</span>
+        <div class="flex flex-col">
+          <span class="text-[9px] text-amber-300 font-bold uppercase tracking-wider">金幣掠奪</span>
+          <span id="goldCounter" class="text-sm sm:text-base font-black text-amber-200">0</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl clash-glass border-fuchsia-500/40">
+        <span class="text-xl leading-none">🧪</span>
+        <div class="flex flex-col">
+          <span class="text-[9px] text-fuchsia-300 font-bold uppercase tracking-wider">聖水掠奪</span>
+          <span id="elixirCounter" class="text-sm sm:text-base font-black text-fuchsia-200">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Destruction & Stars -->
+    <div class="flex flex-col items-center pointer-events-auto">
+      <div class="flex items-center gap-1 sm:gap-1.5 mb-1">
+        <span id="star1" class="text-xl sm:text-2xl text-stone-600 transition-colors duration-300">★</span>
+        <span id="star2" class="text-2xl sm:text-3xl text-stone-600 transition-colors duration-300">★</span>
+        <span id="star3" class="text-xl sm:text-2xl text-stone-600 transition-colors duration-300">★</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-28 sm:w-44 h-3 bg-stone-900/90 rounded-full border border-stone-600/60 overflow-hidden p-0.5">
+          <div id="destructionBar" class="h-full bg-gradient-to-r from-amber-500 to-red-500 rounded-full w-0 transition-all duration-300"></div>
+        </div>
+        <span id="destructionText" class="text-xs sm:text-sm font-black text-white w-10">0%</span>
+      </div>
+    </div>
+
+    <!-- Right: Countdown Timer & End Battle -->
+    <div class="flex items-center gap-2 sm:gap-3 pointer-events-auto">
+      <div class="flex flex-col items-end">
+        <span class="text-[9px] text-stone-300 uppercase tracking-widest font-bold">剩餘時間</span>
+        <span id="battleTimer" class="text-lg sm:text-xl font-black text-yellow-400 font-mono">03:00</span>
+      </div>
+      <button id="btnSurrender" class="clash-btn px-3.5 py-2 rounded-xl bg-gradient-to-b from-rose-600 to-red-800 border border-red-400 text-xs font-black text-white hover:from-rose-500 hover:to-red-700">
+        結束戰鬥
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN BATTLEFIELD CANVAS -->
+  <main class="relative w-full h-full flex items-center justify-center overflow-hidden">
+    <canvas id="gameCanvas" class="block w-full h-full cursor-crosshair"></canvas>
+
+    <!-- Invalid Deployment Warning Toast -->
+    <div id="deployWarning" class="absolute top-24 pointer-events-none opacity-0 transition-opacity duration-200 px-4 py-1.5 rounded-xl bg-red-950/90 border border-red-500 text-red-200 text-xs font-black tracking-wider shadow-lg flex items-center gap-2">
+      <span>⚠️</span> 不能在敵方陣地紅線內放兵！
+    </div>
+  </main>
+
+  <!-- BOTTOM TROOP & SPELL DEPLOYMENT DOCK -->
+  <footer id="troopDock" class="absolute bottom-3 left-0 right-0 z-30 flex items-center justify-center px-2 sm:px-4 pointer-events-none">
+    <div class="flex items-center gap-2 sm:gap-2.5 max-w-full overflow-x-auto py-2 px-3 rounded-2xl clash-glass pointer-events-auto shadow-2xl border border-stone-600/50">
+      
+      <!-- 野蠻人 (Barbarian) -->
+      <button class="troop-card relative flex flex-col items-center justify-between w-14 sm:w-16 h-20 sm:h-22 p-1.5 rounded-xl bg-stone-900 border-2 border-stone-700 selected" data-type="barbarian">
+        <span class="text-2xl sm:text-3xl leading-none mt-1">🗡️</span>
+        <span class="text-[10px] font-black text-amber-300 tracking-tighter">野蠻人</span>
+        <span class="text-xs font-black px-1.5 py-0.5 rounded-md bg-stone-950/90 text-yellow-400 border border-stone-700 count-badge">x30</span>
+      </button>
+
+      <!-- 弓箭手 (Archer) -->
+      <button class="troop-card relative flex flex-col items-center justify-between w-14 sm:w-16 h-20 sm:h-22 p-1.5 rounded-xl bg-stone-900 border-2 border-stone-700" data-type="archer">
+        <span class="text-2xl sm:text-3xl leading-none mt-1">🏹</span>
+        <span class="text-[10px] font-black text-pink-400 tracking-tighter">弓箭手</span>
+        <span class="text-xs font-black px-1.5 py-0.5 rounded-md bg-stone-950/90 text-yellow-400 border border-stone-700 count-badge">x25</span>
+      </button>
+
+      <!-- 巨人 (Giant) -->
+      <button class="troop-card relative flex flex-col items-center justify-between w-14 sm:w-16 h-20 sm:h-22 p-1.5 rounded-xl bg-stone-900 border-2 border-stone-700" data-type="giant">
+        <span class="text-2xl sm:text-3xl leading-none mt-1">🥊</span>
+        <span class="text-[10px] font-black text-amber-500 tracking-tighter">巨人</span>
+        <span class="text-xs font-black px-1.5 py-0.5 rounded-md bg-stone-950/90 text-yellow-400 border border-stone-700 count-badge">x5</span>
+      </button>
+
+      <!-- 炸彈人 (Wall Breaker) -->
+      <button class="troop-card relative flex flex-col items-center justify-between w-14 sm:w-16 h-20 sm:h-22 p-1.5 rounded-xl bg-stone-900 border-2 border-stone-700" data-type="wallbreaker">
+        <span class="text-2xl sm:text-3xl leading-none mt-1">💣</span>
+        <span class="text-[10px] font-black text-orange-400 tracking-tighter">炸彈人</span>
+        <span class="text-xs font-black px-1.5 py-0.5 rounded-md bg-stone-950/90 text-yellow-400 border border-stone-700 count-badge">x6</span>
+      </button>
+
+      <!-- 哥布林 (Goblin) -->
+      <button class="troop-card relative flex flex-col items-center justify-between w-14 sm:w-16 h-20 sm:h-22 p-1.5 rounded-xl bg-stone-900 border-2 border-stone-700" data-type="goblin">
+        <span class="text-2xl sm:text-3xl leading-none mt-1">👺</span>
+        <span class="text-[10px] font-black text-emerald-400 tracking-tighter">哥布林</span>
+        <span class="text-xs font-black px-1.5 py-0.5 rounded-md bg-stone-950/90 text-yellow-400 border border-stone-700 count-badge">x20</span>
+      </button>
+
+      <!-- 魔法師 (Wizard) -->
+      <button class="troop-card relative flex flex-col items-center justify-between w-14 sm:w-16 h-20 sm:h-22 p-1.5 rounded-xl bg-stone-900 border-2 border-stone-700" data-type="wizard">
+        <span class="text-2xl sm:text-3xl leading-none mt-1">🔮</span>
+        <span class="text-[10px] font-black text-indigo-300 tracking-tighter">法師</span>
+        <span class="text-xs font-black px-1.5 py-0.5 rounded-md bg-stone-950/90 text-yellow-400 border border-stone-700 count-badge">x8</span>
+      </button>
+
+      <!-- 分隔線 -->
+      <div class="w-[1.5px] h-12 bg-stone-700 mx-0.5"></div>
+
+      <!-- 狂暴法術 (Rage Spell) -->
+      <button class="troop-card relative flex flex-col items-center justify-between w-14 sm:w-16 h-20 sm:h-22 p-1.5 rounded-xl bg-purple-950/80 border-2 border-purple-600" data-type="rage">
+        <span class="text-2xl sm:text-3xl leading-none mt-1">🟣</span>
+        <span class="text-[10px] font-black text-purple-300 tracking-tighter">狂暴</span>
+        <span class="text-xs font-black px-1.5 py-0.5 rounded-md bg-stone-950/90 text-purple-300 border border-purple-800 count-badge">x2</span>
+      </button>
+
+      <!-- 治癒法術 (Heal Spell) -->
+      <button class="troop-card relative flex flex-col items-center justify-between w-14 sm:w-16 h-20 sm:h-22 p-1.5 rounded-xl bg-yellow-950/80 border-2 border-yellow-500" data-type="heal">
+        <span class="text-2xl sm:text-3xl leading-none mt-1">🟡</span>
+        <span class="text-[10px] font-black text-yellow-300 tracking-tighter">治癒</span>
+        <span class="text-xs font-black px-1.5 py-0.5 rounded-md bg-stone-950/90 text-yellow-300 border border-yellow-700 count-badge">x2</span>
+      </button>
+
+    </div>
+  </footer>
+
+  <!-- RAID SELECTION & TITLE SCREEN MODAL -->
+  <section id="screenMenu" class="absolute inset-0 z-50 flex flex-col items-center justify-between p-6 sm:p-10 bg-radial from-stone-900 via-stone-950 to-black">
+    <div class="flex items-center justify-between w-full max-w-4xl">
+      <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl clash-glass border-amber-400/40 text-amber-300 text-xs font-black">
+        <span>⚔️</span> CLASH OF CLANS HTML5
+      </div>
+      <button id="btnAudioToggle" class="clash-btn px-4 py-1.5 rounded-xl bg-stone-800 border border-stone-600 text-xs font-bold text-amber-300 flex items-center gap-1.5">
+        <span>🔊 音效:</span><span id="audioStateLabel">開</span>
+      </button>
+    </div>
+
+    <!-- Title & Village Selection -->
+    <div class="flex flex-col items-center text-center my-auto w-full max-w-2xl">
+      <h1 class="text-3xl sm:text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-300 via-yellow-400 to-amber-600 tracking-wider drop-shadow-[0_4px_12px_rgba(245,158,11,0.5)] mb-2">
+        部落攻防戰
+      </h1>
+      <p class="text-sm sm:text-base font-bold text-amber-200/80 mb-6 tracking-widest">
+        — 莊園掠奪與城堡攻堅 —
+      </p>
+
+      <!-- Target Village Selector -->
+      <div class="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <!-- Village 1 -->
+        <button class="village-card active flex flex-col items-center p-3.5 rounded-2xl bg-stone-900/90 border-2 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition" data-village="1">
+          <span class="text-2xl mb-1">🛖</span>
+          <span class="text-sm font-black text-amber-300">哥布林前哨</span>
+          <span class="text-[10px] text-stone-400 font-bold mt-1">難度：簡單 (初學)</span>
+          <span class="text-[10px] text-amber-400 mt-0.5">💰 18,000 | 🧪 16,000</span>
+        </button>
+
+        <!-- Village 2 -->
+        <button class="village-card flex flex-col items-center p-3.5 rounded-2xl bg-stone-900/90 border-2 border-stone-700 hover:border-amber-400 transition" data-village="2">
+          <span class="text-2xl mb-1">🏰</span>
+          <span class="text-sm font-black text-amber-300">雙重圍牆莊園</span>
+          <span class="text-[10px] text-stone-400 font-bold mt-1">難度：普通 (中階)</span>
+          <span class="text-[10px] text-amber-400 mt-0.5">💰 35,000 | 🧪 32,000</span>
+        </button>
+
+        <!-- Village 3 -->
+        <button class="village-card flex flex-col items-center p-3.5 rounded-2xl bg-stone-900/90 border-2 border-stone-700 hover:border-amber-400 transition" data-village="3">
+          <span class="text-2xl mb-1">⚔️</span>
+          <span class="text-sm font-black text-amber-300">鋼鐵十字堡壘</span>
+          <span class="text-[10px] text-stone-400 font-bold mt-1">難度：困難 (迫擊砲)</span>
+          <span class="text-[10px] text-amber-400 mt-0.5">💰 55,000 | 🧪 50,000</span>
+        </button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row gap-3.5 w-full max-w-md">
+        <button id="btnStartAttack" class="clash-btn flex-1 py-3.5 rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 text-stone-950 text-base sm:text-lg font-black tracking-wider border-2 border-amber-200">
+          🔥 發動進攻 (ATTACK)
+        </button>
+        <button id="btnRandomVillage" class="clash-btn px-6 py-3.5 rounded-2xl bg-stone-800 border-2 border-stone-600 text-stone-200 hover:text-white text-sm font-bold tracking-wider">
+          🎲 搜尋下一對手
+        </button>
+      </div>
+    </div>
+
+    <!-- Gameplay Guide Bar -->
+    <div class="w-full max-w-3xl flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-[11px] text-stone-400 font-medium border-t border-stone-800 pt-3">
+      <span>🛡️ 巨人：優先摧毀加農砲與箭塔</span>
+      <span>💣 炸彈人：對城牆造成 40 倍爆破傷害</span>
+      <span>👺 哥布林：搶奪金庫與聖水瓶</span>
+      <span>💥 迫擊砲：拋物線群體濺射傷害</span>
+    </div>
+  </section>
+
+  <!-- BATTLE RESULT MODAL -->
+  <section id="screenResult" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden">
+    <div class="w-full max-w-md clash-glass rounded-3xl p-6 sm:p-8 flex flex-col items-center text-center border-2 border-amber-500 shadow-[0_0_50px_rgba(245,158,11,0.5)]">
+      
+      <div id="resultTitle" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-wider mb-2">
+        戰鬥結束！
+      </div>
+      <div id="resultSubtitle" class="text-xs text-stone-300 font-bold mb-4">
+        進攻部落莊園獲得勝利
+      </div>
+
+      <!-- Result Stars Awarded -->
+      <div class="flex items-center justify-center gap-2 mb-6">
+        <span id="endStar1" class="text-4xl text-stone-600 transition-all duration-300">★</span>
+        <span id="endStar2" class="text-5xl text-stone-600 transition-all duration-300 -translate-y-2">★</span>
+        <span id="endStar3" class="text-4xl text-stone-600 transition-all duration-300">★</span>
+      </div>
+
+      <!-- Stats Summary Board -->
+      <div class="w-full bg-stone-950/80 rounded-2xl p-4 border border-stone-700/60 flex flex-col gap-2.5 mb-6 text-sm">
+        <div class="flex justify-between items-center text-stone-300">
+          <span>摧毀程度</span>
+          <span id="endDestruction" class="font-black text-white text-base">0%</span>
+        </div>
+        <div class="flex justify-between items-center text-amber-300">
+          <span>掠奪金幣</span>
+          <span id="endGold" class="font-black text-base">+0</span>
+        </div>
+        <div class="flex justify-between items-center text-fuchsia-300">
+          <span>掠奪聖水</span>
+          <span id="endElixir" class="font-black text-base">+0</span>
+        </div>
+      </div>
+
+      <!-- Button Return -->
+      <button id="btnReturnMenu" class="clash-btn w-full py-3.5 rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 text-stone-950 font-black text-base tracking-wider border-2 border-amber-200">
+        返回大本營
+      </button>
+    </div>
+  </section>
+
+  <!-- JAVASCRIPT: WEB AUDIO ENGINE -->
+  <script>
+    class ClashAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      toggle() {
+        this.enabled = !this.enabled;
+        return this.enabled;
+      }
+      // Cannon blast sound
+      playCannon() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.25);
+      }
+      // Arrow bow twang
+      playArrow() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450, now);
+        osc.frequency.exponentialRampToValueAtTime(150, now + 0.12);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.12);
+      }
+      // Mortar explosion thud
+      playMortar() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(90, now);
+        osc.frequency.exponentialRampToValueAtTime(20, now + 0.55);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.55);
+      }
+      // Wall breaker bomb boom
+      playBomb() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(25, now + 0.4);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.4);
+      }
+      // Wizard fireball woosh & hit
+      playFireball() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.22);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.22);
+      }
+      // Troop deploy spawn pop
+      playDeploy() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.08);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.08);
+      }
+      // Loot coin pickup chime
+      playCoin() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(987.77, now);
+        osc.frequency.setValueAtTime(1318.51, now + 0.05);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.18);
+      }
+      // Spell hum
+      playSpell(type) {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(type === 'rage' ? 220 : 660, now);
+        osc.frequency.linearRampToValueAtTime(type === 'rage' ? 440 : 880, now + 0.35);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.4);
+      }
+      // Star Fanfare
+      playFanfare() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const notes = [440, 554.37, 659.25, 880];
+        notes.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + i * 0.1);
+          gain.gain.setValueAtTime(0.3, now + i * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.35);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.1); osc.stop(now + i * 0.1 + 0.35);
+        });
+      }
+    }
+    const audio = new ClashAudioEngine();
+  </script>
+
+  <!-- JAVASCRIPT: VILLAGE PRESETS & MAP BUILDER -->
+  <script>
+    // Building Configurations
+    const BUILDING_TYPES = {
+      townhall: { name: '大本營', maxHp: 1800, size: 50, color: '#f59e0b', gold: 12000, elixir: 10000, isDefense: false, icon: '🏛️' },
+      gold_storage: { name: '儲金庫', maxHp: 800, size: 36, color: '#eab308', gold: 15000, elixir: 0, isDefense: false, icon: '🪙' },
+      elixir_storage: { name: '聖水瓶', maxHp: 800, size: 36, color: '#c026d3', gold: 0, elixir: 15000, isDefense: false, icon: '🧪' },
+      cannon: { name: '加農砲', maxHp: 650, size: 34, color: '#475569', range: 170, attackDmg: 28, attackRate: 0.9, isDefense: true, icon: '💣' },
+      archer_tower: { name: '箭塔', maxHp: 550, size: 32, color: '#9333ea', range: 210, attackDmg: 18, attackRate: 0.6, isDefense: true, icon: '🏹' },
+      mortar: { name: '迫擊砲', maxHp: 500, size: 36, color: '#334155', range: 270, minRange: 70, attackDmg: 45, attackRate: 3.5, splash: 55, isDefense: true, icon: '💥' },
+      wall: { name: '城牆', maxHp: 650, size: 20, color: '#78716c', isWall: true, isDefense: false }
+    };
+
+    // Preset Villages definition
+    function getVillageData(id) {
+      if (id === '1') {
+        // 哥布林前哨 (Beginner)
+        return {
+          name: '哥布林前哨',
+          buildings: [
+            { type: 'townhall', x: 0, y: 0 },
+            { type: 'gold_storage', x: -65, y: -45 },
+            { type: 'elixir_storage', x: 65, y: 45 },
+            { type: 'cannon', x: 0, y: -90 },
+            { type: 'archer_tower', x: 0, y: 90 },
+            // Outer loose walls
+            { type: 'wall', x: -100, y: -100 }, { type: 'wall', x: -80, y: -100 }, { type: 'wall', x: -60, y: -100 },
+            { type: 'wall', x: 60, y: 100 }, { type: 'wall', x: 80, y: 100 }, { type: 'wall', x: 100, y: 100 }
+          ]
+        };
+      } else if (id === '2') {
+        // 雙重圍牆莊園 (Intermediate)
+        const walls = [];
+        // Box wall enclosure
+        for (let x = -130; x <= 130; x += 26) {
+          walls.push({ type: 'wall', x: x, y: -110 });
+          walls.push({ type: 'wall', x: x, y: 110 });
+        }
+        for (let y = -90; y <= 90; y += 26) {
+          walls.push({ type: 'wall', x: -130, y: y });
+          walls.push({ type: 'wall', x: 130, y: y });
+        }
+        return {
+          name: '雙重圍牆莊園',
+          buildings: [
+            { type: 'townhall', x: 0, y: 0 },
+            { type: 'gold_storage', x: -70, y: 0 },
+            { type: 'elixir_storage', x: 70, y: 0 },
+            { type: 'cannon', x: -60, y: -65 },
+            { type: 'cannon', x: 60, y: -65 },
+            { type: 'archer_tower', x: -60, y: 65 },
+            { type: 'archer_tower', x: 60, y: 65 },
+            ...walls
+          ]
+        };
+      } else {
+        // 鋼鐵十字堡壘 (Advanced)
+        const walls = [];
+        // Cross / Compartment walls
+        for (let i = -160; i <= 160; i += 26) {
+          walls.push({ type: 'wall', x: i, y: -130 });
+          walls.push({ type: 'wall', x: i, y: 130 });
+          if (Math.abs(i) > 20) walls.push({ type: 'wall', x: 0, y: i });
+        }
+        for (let y = -110; y <= 110; y += 26) {
+          walls.push({ type: 'wall', x: -160, y: y });
+          walls.push({ type: 'wall', x: 160, y: y });
+        }
+        return {
+          name: '鋼鐵十字堡壘',
+          buildings: [
+            { type: 'townhall', x: 0, y: 0 },
+            { type: 'mortar', x: 0, y: -60 },
+            { type: 'mortar', x: 0, y: 60 },
+            { type: 'gold_storage', x: -90, y: -50 },
+            { type: 'gold_storage', x: 90, y: 50 },
+            { type: 'elixir_storage', x: -90, y: 50 },
+            { type: 'elixir_storage', x: 90, y: -50 },
+            { type: 'cannon', x: -110, y: 0 },
+            { type: 'cannon', x: 110, y: 0 },
+            { type: 'archer_tower', x: -80, y: -95 },
+            { type: 'archer_tower', x: 80, y: 95 },
+            ...walls
+          ]
+        };
+      }
+    }
+  </script>
+
+  <!-- JAVASCRIPT: COMBAT & TARGETING AI ENGINE -->
+  <script>
+    // Troop Archetype definitions
+    const TROOP_STATS = {
+      barbarian: { name: '野蠻人', hp: 120, dmg: 24, spd: 1.7, range: 18, rate: 0.9, fav: 'any', count: 30, color: '#f59e0b', icon: '🗡️' },
+      archer: { name: '弓箭手', hp: 60, dmg: 18, spd: 1.8, range: 140, rate: 0.8, fav: 'any', count: 25, color: '#ec4899', icon: '🏹' },
+      giant: { name: '巨人', hp: 600, dmg: 32, spd: 1.0, range: 22, rate: 1.4, fav: 'defense', count: 5, color: '#d97706', icon: '🥊' },
+      wallbreaker: { name: '炸彈人', hp: 70, dmg: 260, spd: 2.5, range: 18, rate: 0.1, fav: 'wall', count: 6, color: '#f97316', icon: '💣' },
+      goblin: { name: '哥布林', hp: 75, dmg: 35, spd: 2.8, range: 18, rate: 0.7, fav: 'resource', count: 20, color: '#10b981', icon: '👺' },
+      wizard: { name: '魔法師', hp: 110, dmg: 65, spd: 1.5, range: 130, rate: 1.5, splash: 35, fav: 'any', count: 8, color: '#818cf8', icon: '🔮' },
+      rage: { name: '狂暴法術', count: 2, isSpell: true },
+      heal: { name: '治癒法術', count: 2, isSpell: true }
+    };
+
+    class GameEngine {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.selectedType = 'barbarian';
+        this.selectedVillageId = '1';
+        this.isRunning = false;
+
+        this.troops = [];
+        this.buildings = [];
+        this.projectiles = [];
+        this.particles = [];
+        this.spells = [];
+        this.floatingTexts = [];
+
+        this.totalInitialBuildings = 0;
+        this.stolenGold = 0;
+        this.stolenElixir = 0;
+        this.destructionPercent = 0;
+        this.townhallDestroyed = false;
+        this.stars = 0;
+
+        this.battleTimerSeconds = 180;
+        this.timerInterval = null;
+        this.counts = {};
+
+        this.initCanvasSize();
+        this.bindEvents();
+      }
+
+      initCanvasSize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        window.addEventListener('resize', () => {
+          this.canvas.width = window.innerWidth;
+          this.canvas.height = window.innerHeight;
+        });
+      }
+
+      bindEvents() {
+        // Select troop card
+        document.querySelectorAll('.troop-card').forEach(card => {
+          card.addEventListener('click', (e) => {
+            const type = card.dataset.type;
+            if (this.counts[type] <= 0) return;
+            document.querySelectorAll('.troop-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            this.selectedType = type;
+          });
+        });
+
+        // Village select in menu
+        document.querySelectorAll('.village-card').forEach(card => {
+          card.addEventListener('click', () => {
+            document.querySelectorAll('.village-card').forEach(c => {
+              c.classList.remove('active', 'border-amber-500', 'shadow-[0_0_15px_rgba(245,158,11,0.3)]');
+              c.classList.add('border-stone-700');
+            });
+            card.classList.add('active', 'border-amber-500', 'shadow-[0_0_15px_rgba(245,158,11,0.3)]');
+            card.classList.remove('border-stone-700');
+            this.selectedVillageId = card.dataset.village;
+          });
+        });
+
+        // Start Attack button
+        document.getElementById('btnStartAttack').addEventListener('click', () => {
+          audio.init();
+          audio.playDeploy();
+          document.getElementById('screenMenu').classList.add('hidden');
+          this.startBattle(this.selectedVillageId);
+        });
+
+        // Random Village
+        document.getElementById('btnRandomVillage').addEventListener('click', () => {
+          const rand = String(Math.floor(Math.random() * 3) + 1);
+          document.querySelector(`.village-card[data-village="${rand}"]`).click();
+          audio.playCoin();
+        });
+
+        // Surrender button
+        document.getElementById('btnSurrender').addEventListener('click', () => {
+          this.endBattle('進攻撤退！');
+        });
+
+        // Return to Menu
+        document.getElementById('btnReturnMenu').addEventListener('click', () => {
+          document.getElementById('screenResult').classList.add('hidden');
+          document.getElementById('screenMenu').classList.remove('hidden');
+        });
+
+        // Audio Toggle
+        document.getElementById('btnAudioToggle').addEventListener('click', () => {
+          const on = audio.toggle();
+          document.getElementById('audioStateLabel').innerText = on ? '開' : '關';
+        });
+
+        // Canvas Click to Deploy Troop or Drop Spell
+        this.canvas.addEventListener('pointerdown', (e) => {
+          if (!this.isRunning) return;
+          const rect = this.canvas.getBoundingClientRect();
+          const screenX = e.clientX - rect.left;
+          const screenY = e.clientY - rect.top;
+          const worldX = screenX - this.canvas.width / 2;
+          const worldY = screenY - this.canvas.height / 2;
+
+          this.handlePlayerAction(worldX, worldY);
+        });
+      }
+
+      // Check if location is inside the forbidden Red Boundary (Clash Deployment Rule)
+      isForbiddenZone(wx, wy) {
+        // If it's a spell, spells can be dropped anywhere inside or outside
+        if (TROOP_STATS[this.selectedType]?.isSpell) return false;
+
+        // Check distance to all living buildings; must be >= 60px away from all buildings
+        for (let b of this.buildings) {
+          if (b.hp > 0) {
+            const dist = Math.hypot(b.x - wx, b.y - wy);
+            const safeDistance = b.size * 0.75 + 40;
+            if (dist < safeDistance) return true;
+          }
+        }
+        return false;
+      }
+
+      showDeployWarning() {
+        const warn = document.getElementById('deployWarning');
+        warn.classList.remove('opacity-0');
+        clearTimeout(this.warnTimer);
+        this.warnTimer = setTimeout(() => warn.classList.add('opacity-0'), 1200);
+      }
+
+      handlePlayerAction(wx, wy) {
+        const type = this.selectedType;
+        if (this.counts[type] <= 0) return;
+
+        if (this.isForbiddenZone(wx, wy)) {
+          this.showDeployWarning();
+          return;
+        }
+
+        this.counts[type]--;
+        this.updateDockUI();
+
+        if (TROOP_STATS[type].isSpell) {
+          // Deploy Spell
+          this.spells.push({
+            type: type,
+            x: wx,
+            y: wy,
+            radius: 110,
+            duration: 8.0, // seconds
+            timer: 8.0
+          });
+          audio.playSpell(type);
+          this.addFloatingText(wx, wy - 20, type === 'rage' ? '狂暴加持！' : '治癒光環！', type === 'rage' ? '#c084fc' : '#fde047');
+        } else {
+          // Deploy Troop
+          audio.playDeploy();
+          const stat = TROOP_STATS[type];
+          this.troops.push({
+            type: type,
+            x: wx,
+            y: wy,
+            hp: stat.hp,
+            maxHp: stat.hp,
+            dmg: stat.dmg,
+            spd: stat.spd,
+            range: stat.range,
+            rate: stat.rate,
+            fav: stat.fav,
+            splash: stat.splash || 0,
+            color: stat.color,
+            icon: stat.icon,
+            cooldown: 0,
+            target: null
+          });
+        }
+      }
+
+      startBattle(villageId) {
+        this.isRunning = true;
+        this.troops = [];
+        this.projectiles = [];
+        this.particles = [];
+        this.spells = [];
+        this.floatingTexts = [];
+        this.stolenGold = 0;
+        this.stolenElixir = 0;
+        this.destructionPercent = 0;
+        this.townhallDestroyed = false;
+        this.stars = 0;
+        this.battleTimerSeconds = 180;
+
+        // Reset Unit counts
+        for (let key in TROOP_STATS) {
+          this.counts[key] = TROOP_STATS[key].count;
+        }
+        this.updateDockUI();
+
+        // Load Village
+        const data = getVillageData(villageId);
+        this.buildings = data.buildings.map((b, idx) => {
+          const cfg = BUILDING_TYPES[b.type];
+          return {
+            id: idx,
+            type: b.type,
+            name: cfg.name,
+            x: b.x,
+            y: b.y,
+            size: cfg.size,
+            hp: cfg.maxHp,
+            maxHp: cfg.maxHp,
+            color: cfg.color,
+            isDefense: cfg.isDefense || false,
+            isWall: cfg.isWall || false,
+            gold: cfg.gold || 0,
+            elixir: cfg.elixir || 0,
+            range: cfg.range || 0,
+            minRange: cfg.minRange || 0,
+            attackDmg: cfg.attackDmg || 0,
+            attackRate: cfg.attackRate || 1.0,
+            splash: cfg.splash || 0,
+            icon: cfg.icon || '',
+            cooldown: 0,
+            target: null
+          };
+        });
+
+        // Non-wall buildings count towards 100% destruction
+        this.destructibleBuildings = this.buildings.filter(b => !b.isWall);
+        this.totalInitialBuildings = this.destructibleBuildings.length;
+
+        // Reset HUD
+        document.getElementById('goldCounter').innerText = '0';
+        document.getElementById('elixirCounter').innerText = '0';
+        document.getElementById('destructionBar').style.width = '0%';
+        document.getElementById('destructionText').innerText = '0%';
+        this.updateStarsHUD(0);
+
+        // Timer interval
+        clearInterval(this.timerInterval);
+        this.timerInterval = setInterval(() => {
+          if (!this.isRunning) return;
+          this.battleTimerSeconds--;
+          const m = String(Math.floor(this.battleTimerSeconds / 60)).padStart(2, '0');
+          const s = String(this.battleTimerSeconds % 60).padStart(2, '0');
+          document.getElementById('battleTimer').innerText = `${m}:${s}`;
+
+          if (this.battleTimerSeconds <= 0) {
+            this.endBattle('時間結束！');
+          }
+        }, 1000);
+
+        requestAnimationFrame((t) => this.loop(t));
+      }
+
+      updateDockUI() {
+        document.querySelectorAll('.troop-card').forEach(card => {
+          const type = card.dataset.type;
+          const badge = card.querySelector('.count-badge');
+          badge.innerText = `x${this.counts[type]}`;
+          if (this.counts[type] <= 0) {
+            card.classList.add('disabled');
+          } else {
+            card.classList.remove('disabled');
+          }
+        });
+
+        // If active card has 0 count, automatically select next available
+        if (this.counts[this.selectedType] <= 0) {
+          for (let key in this.counts) {
+            if (this.counts[key] > 0) {
+              document.querySelector(`.troop-card[data-type="${key}"]`)?.click();
+              break;
+            }
+          }
+        }
+      }
+
+      updateStarsHUD(stars) {
+        this.stars = stars;
+        for (let i = 1; i <= 3; i++) {
+          const starEl = document.getElementById(`star${i}`);
+          if (i <= stars) {
+            starEl.classList.remove('text-stone-600');
+            starEl.classList.add('text-amber-400', 'star-glow');
+          } else {
+            starEl.classList.remove('text-amber-400', 'star-glow');
+            starEl.classList.add('text-stone-600');
+          }
+        }
+      }
+
+      endBattle(reasonTitle) {
+        if (!this.isRunning) return;
+        this.isRunning = false;
+        clearInterval(this.timerInterval);
+        audio.playFanfare();
+
+        document.getElementById('resultTitle').innerText = reasonTitle || '戰鬥結束！';
+        document.getElementById('endDestruction').innerText = `${this.destructionPercent}%`;
+        document.getElementById('endGold').innerText = `+${this.stolenGold.toLocaleString()}`;
+        document.getElementById('endElixir').innerText = `+${this.stolenElixir.toLocaleString()}`;
+
+        for (let i = 1; i <= 3; i++) {
+          const star = document.getElementById(`endStar${i}`);
+          if (i <= this.stars) {
+            star.classList.remove('text-stone-600');
+            star.classList.add('text-amber-400', 'star-glow');
+          } else {
+            star.classList.remove('text-amber-400', 'star-glow');
+            star.classList.add('text-stone-600');
+          }
+        }
+
+        document.getElementById('screenResult').classList.remove('hidden');
+      }
+
+      addFloatingText(x, y, text, color) {
+        this.floatingTexts.push({ x, y, text, color, life: 40 });
+      }
+
+      // MAIN SIMULATION UPDATE
+      update(dt) {
+        // 1. Update Spells
+        for (let i = this.spells.length - 1; i >= 0; i--) {
+          const sp = this.spells[i];
+          sp.timer -= dt;
+          if (sp.timer <= 0) {
+            this.spells.splice(i, 1);
+          }
+        }
+
+        // 2. Update Troops
+        for (let i = this.troops.length - 1; i >= 0; i--) {
+          const tr = this.troops[i];
+          if (tr.hp <= 0) {
+            this.troops.splice(i, 1);
+            continue;
+          }
+
+          // Check if troop is inside Rage or Heal Spells
+          let speedMultiplier = 1.0;
+          let damageMultiplier = 1.0;
+          for (let sp of this.spells) {
+            const dist = Math.hypot(tr.x - sp.x, tr.y - sp.y);
+            if (dist <= sp.radius) {
+              if (sp.type === 'rage') {
+                speedMultiplier = 1.5;
+                damageMultiplier = 1.5;
+              } else if (sp.type === 'heal') {
+                tr.hp = Math.min(tr.maxHp, tr.hp + 28 * dt);
+              }
+            }
+          }
+
+          // Targeting AI
+          if (!tr.target || tr.target.hp <= 0) {
+            tr.target = this.findTroopTarget(tr);
+          }
+
+          if (tr.target) {
+            const dist = Math.hypot(tr.target.x - tr.x, tr.target.y - tr.y);
+            const effectiveRange = tr.range + tr.target.size * 0.45;
+
+            if (dist > effectiveRange) {
+              // Move towards target
+              const angle = Math.atan2(tr.target.y - tr.y, tr.target.x - tr.x);
+              tr.x += Math.cos(angle) * tr.spd * speedMultiplier;
+              tr.y += Math.sin(angle) * tr.spd * speedMultiplier;
+            } else {
+              // Attack Target
+              tr.cooldown -= dt;
+              if (tr.cooldown <= 0) {
+                tr.cooldown = tr.rate;
+                this.troopAttack(tr, damageMultiplier);
+              }
+            }
+          }
+        }
+
+        // 3. Update Defending Towers (Cannons, Archer Towers, Mortars)
+        for (let b of this.buildings) {
+          if (b.hp <= 0 || !b.isDefense) continue;
+
+          b.cooldown -= dt;
+
+          // Target acquisition
+          if (!b.target || b.target.hp <= 0 || Math.hypot(b.target.x - b.x, b.target.y - b.y) > b.range) {
+            b.target = this.findTowerTarget(b);
+          }
+
+          if (b.target && b.cooldown <= 0) {
+            b.cooldown = b.attackRate;
+            this.towerAttack(b);
+          }
+        }
+
+        // 4. Update Projectiles (Arrows, Cannonballs, Mortar Shells, Fireballs)
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+          const p = this.projectiles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if (p.isArc) {
+            p.arcProgress += 0.035;
+            p.heightOffset = Math.sin(p.arcProgress * Math.PI) * 75; // parabolic arc
+            if (p.arcProgress >= 1.0) {
+              // Mortar impact
+              this.triggerMortarExplosion(p.targetX, p.targetY, p.dmg, p.splash);
+              this.projectiles.splice(i, 1);
+              continue;
+            }
+          } else {
+            // Direct projectile check
+            const dist = Math.hypot(p.target.x - p.x, p.target.y - p.y);
+            if (dist < 18) {
+              // Hit target
+              if (p.splash > 0) {
+                this.triggerWizardSplash(p.target.x, p.target.y, p.dmg, p.splash);
+              } else {
+                this.damageTarget(p.target, p.dmg);
+              }
+              this.projectiles.splice(i, 1);
+              continue;
+            }
+          }
+        }
+
+        // 5. Update Particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const pt = this.particles[i];
+          pt.x += pt.vx;
+          pt.y += pt.vy;
+          pt.life -= dt * 2.5;
+          if (pt.life <= 0) this.particles.splice(i, 1);
+        }
+
+        // 6. Update Floating Text
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+          const ft = this.floatingTexts[i];
+          ft.y -= 0.6;
+          ft.life--;
+          if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+        }
+
+        // 7. Check Battle End Conditions (All Troops deployed & dead, or 100% destruction)
+        const hasRemainingTroopsInStock = Object.values(this.counts).some(c => c > 0);
+        if (!hasRemainingTroopsInStock && this.troops.length === 0 && this.projectiles.length === 0) {
+          this.endBattle('部隊全數耗盡！');
+        } else if (this.destructionPercent >= 100) {
+          this.endBattle('三面全勝！完勝 (100%)');
+        }
+      }
+
+      // Troop Targeting Logic (Clash-style priorities)
+      findTroopTarget(tr) {
+        const aliveBuildings = this.buildings.filter(b => b.hp > 0);
+        if (aliveBuildings.length === 0) return null;
+
+        // 1. Giant prioritizes Defenses
+        if (tr.fav === 'defense') {
+          const defenses = aliveBuildings.filter(b => b.isDefense);
+          if (defenses.length > 0) {
+            return this.getClosest(tr.x, tr.y, defenses);
+          }
+        }
+
+        // 2. Wall breaker prioritizes nearest Wall
+        if (tr.fav === 'wall') {
+          const walls = aliveBuildings.filter(b => b.isWall);
+          if (walls.length > 0) {
+            return this.getClosest(tr.x, tr.y, walls);
+          }
+        }
+
+        // 3. Goblin prioritizes Resource Storages & Town Hall
+        if (tr.fav === 'resource') {
+          const resources = aliveBuildings.filter(b => (b.gold > 0 || b.elixir > 0 || b.type === 'townhall') && !b.isWall);
+          if (resources.length > 0) {
+            return this.getClosest(tr.x, tr.y, resources);
+          }
+        }
+
+        // 4. Default: Nearest non-wall building (unless only walls remain)
+        const nonWalls = aliveBuildings.filter(b => !b.isWall);
+        if (nonWalls.length > 0) {
+          return this.getClosest(tr.x, tr.y, nonWalls);
+        }
+        return this.getClosest(tr.x, tr.y, aliveBuildings);
+      }
+
+      getClosest(x, y, list) {
+        let closest = null;
+        let minDist = Infinity;
+        for (let item of list) {
+          const d = Math.hypot(item.x - x, item.y - y);
+          if (d < minDist) {
+            minDist = d;
+            closest = item;
+          }
+        }
+        return closest;
+      }
+
+      findTowerTarget(tower) {
+        const validTroops = this.troops.filter(tr => {
+          const dist = Math.hypot(tr.x - tower.x, tr.y - tower.y);
+          return dist <= tower.range && dist >= tower.minRange;
+        });
+        if (validTroops.length === 0) return null;
+        return this.getClosest(tower.x, tower.y, validTroops);
+      }
+
+      troopAttack(tr, dmgMultiplier) {
+        let finalDmg = tr.dmg * dmgMultiplier;
+
+        // Wall Breaker Suicide detonation
+        if (tr.type === 'wallbreaker') {
+          audio.playBomb();
+          if (tr.target.isWall) finalDmg *= 40; // 40x wall damage
+          this.damageTarget(tr.target, finalDmg);
+          this.createExplosion(tr.x, tr.y, '#f97316', 35);
+          tr.hp = 0; // dies upon bomb explosion
+          return;
+        }
+
+        // Goblin resource multiplier
+        if (tr.type === 'goblin' && (tr.target.gold > 0 || tr.target.elixir > 0 || tr.target.type === 'townhall')) {
+          finalDmg *= 2;
+        }
+
+        if (tr.type === 'archer') {
+          audio.playArrow();
+          const angle = Math.atan2(tr.target.y - tr.y, tr.target.x - tr.x);
+          this.projectiles.push({
+            x: tr.x, y: tr.y,
+            vx: Math.cos(angle) * 7.5,
+            vy: Math.sin(angle) * 7.5,
+            target: tr.target,
+            dmg: finalDmg,
+            color: '#ec4899',
+            isArc: false
+          });
+        } else if (tr.type === 'wizard') {
+          audio.playFireball();
+          const angle = Math.atan2(tr.target.y - tr.y, tr.target.x - tr.x);
+          this.projectiles.push({
+            x: tr.x, y: tr.y,
+            vx: Math.cos(angle) * 6.5,
+            vy: Math.sin(angle) * 6.5,
+            target: tr.target,
+            dmg: finalDmg,
+            splash: tr.splash,
+            color: '#818cf8',
+            isArc: false
+          });
+        } else {
+          // Melee strike (Barbarian, Giant, Goblin)
+          this.damageTarget(tr.target, finalDmg);
+          this.createHitSpark(tr.target.x, tr.target.y, tr.color);
+        }
+      }
+
+      towerAttack(tower) {
+        if (tower.type === 'cannon') {
+          audio.playCannon();
+          const angle = Math.atan2(tower.target.y - tower.y, tower.target.x - tower.x);
+          this.projectiles.push({
+            x: tower.x, y: tower.y,
+            vx: Math.cos(angle) * 8.5,
+            vy: Math.sin(angle) * 8.5,
+            target: tower.target,
+            dmg: tower.attackDmg,
+            color: '#1e293b',
+            isArc: false
+          });
+        } else if (tower.type === 'archer_tower') {
+          audio.playArrow();
+          const angle = Math.atan2(tower.target.y - tower.y, tower.target.x - tower.x);
+          this.projectiles.push({
+            x: tower.x, y: tower.y,
+            vx: Math.cos(angle) * 9.0,
+            vy: Math.sin(angle) * 9.0,
+            target: tower.target,
+            dmg: tower.attackDmg,
+            color: '#c084fc',
+            isArc: false
+          });
+        } else if (tower.type === 'mortar') {
+          audio.playMortar();
+          this.projectiles.push({
+            x: tower.x, y: tower.y,
+            targetX: tower.target.x,
+            targetY: tower.target.y,
+            vx: (tower.target.x - tower.x) / 30,
+            vy: (tower.target.y - tower.y) / 30,
+            arcProgress: 0,
+            heightOffset: 0,
+            dmg: tower.attackDmg,
+            splash: tower.splash,
+            color: '#334155',
+            isArc: true
+          });
+        }
+      }
+
+      damageTarget(target, dmg) {
+        if (target.hp <= 0) return;
+        target.hp -= dmg;
+        this.addFloatingText(target.x, target.y - 15, `-${Math.round(dmg)}`, '#f87171');
+
+        // Loot Extraction from Storage/Townhall
+        if (target.gold > 0 || target.elixir > 0) {
+          const goldSteal = Math.min(target.gold, Math.round(dmg * 4));
+          const elixirSteal = Math.min(target.elixir, Math.round(dmg * 4));
+          if (goldSteal > 0) {
+            target.gold -= goldSteal;
+            this.stolenGold += goldSteal;
+            document.getElementById('goldCounter').innerText = this.stolenGold.toLocaleString();
+            audio.playCoin();
+          }
+          if (elixirSteal > 0) {
+            target.elixir -= elixirSteal;
+            this.stolenElixir += elixirSteal;
+            document.getElementById('elixirCounter').innerText = this.stolenElixir.toLocaleString();
+          }
+        }
+
+        // Building Destroyed
+        if (target.hp <= 0) {
+          target.hp = 0;
+          this.createExplosion(target.x, target.y, target.color, target.size * 0.8);
+
+          if (!target.isWall) {
+            // Check destruction %
+            const destroyedCount = this.destructibleBuildings.filter(b => b.hp <= 0).length;
+            this.destructionPercent = Math.round((destroyedCount / this.totalInitialBuildings) * 100);
+            document.getElementById('destructionBar').style.width = `${this.destructionPercent}%`;
+            document.getElementById('destructionText').innerText = `${this.destructionPercent}%`;
+
+            if (target.type === 'townhall') {
+              this.townhallDestroyed = true;
+              this.addFloatingText(target.x, target.y - 30, '★ 大本營摧毀！', '#facc15');
+            }
+
+            // Calculate Clash 3-Stars
+            let starsEarned = 0;
+            if (this.townhallDestroyed || this.destructionPercent >= 50) starsEarned = 1;
+            if (this.townhallDestroyed && this.destructionPercent >= 50) starsEarned = 2;
+            if (this.destructionPercent >= 100) starsEarned = 3;
+            this.updateStarsHUD(starsEarned);
+          }
+        }
+      }
+
+      triggerMortarExplosion(x, y, dmg, splash) {
+        audio.playMortar();
+        this.createExplosion(x, y, '#eab308', splash);
+        for (let tr of this.troops) {
+          const d = Math.hypot(tr.x - x, tr.y - y);
+          if (d <= splash) {
+            tr.hp -= dmg;
+            this.addFloatingText(tr.x, tr.y - 10, `-${Math.round(dmg)}`, '#ef4444');
+          }
+        }
+      }
+
+      triggerWizardSplash(x, y, dmg, splash) {
+        this.createExplosion(x, y, '#818cf8', splash);
+        for (let b of this.buildings) {
+          if (b.hp > 0) {
+            const d = Math.hypot(b.x - x, b.y - y);
+            if (d <= splash) {
+              this.damageTarget(b, dmg);
+            }
+          }
+        }
+      }
+
+      createExplosion(x, y, color, size) {
+        for (let i = 0; i < 18; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 1.5 + Math.random() * 4.5;
+          this.particles.push({
+            x, y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color,
+            radius: 2.5 + Math.random() * 3.5,
+            life: 1.0
+          });
+        }
+      }
+
+      createHitSpark(x, y, color) {
+        for (let i = 0; i < 6; i++) {
+          this.particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 4,
+            vy: (Math.random() - 0.5) * 4,
+            color,
+            radius: 2,
+            life: 0.6
+          });
+        }
+      }
+
+      // RENDER PIPELINE
+      render() {
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // 1. Draw Grassland Checkerboard Background
+        const tileSize = 44;
+        const cols = Math.ceil(w / tileSize) + 2;
+        const rows = Math.ceil(h / tileSize) + 2;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            ctx.fillStyle = (r + c) % 2 === 0 ? '#27441d' : '#223d19';
+            ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+          }
+        }
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // 2. Draw Clash-style Forbidden Red Deployment Boundary
+        if (this.isRunning) {
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([8, 6]);
+          for (let b of this.buildings) {
+            if (b.hp > 0) {
+              ctx.beginPath();
+              ctx.arc(b.x, b.y, b.size * 0.75 + 40, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+          }
+          ctx.setLineDash([]);
+        }
+
+        // 3. Draw Active Spells on Ground (Rage & Heal Auras)
+        for (let sp of this.spells) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(sp.x, sp.y, sp.radius, 0, Math.PI * 2);
+          if (sp.type === 'rage') {
+            ctx.fillStyle = 'rgba(168, 85, 247, 0.22)';
+            ctx.strokeStyle = 'rgba(192, 132, 252, 0.7)';
+          } else {
+            ctx.fillStyle = 'rgba(234, 179, 8, 0.22)';
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.7)';
+          }
+          ctx.lineWidth = 3;
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 4. Draw Buildings & Walls
+        for (let b of this.buildings) {
+          if (b.hp <= 0) {
+            // Ruined Rubble
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(b.x - b.size / 2, b.y - b.size / 2, b.size, b.size);
+            continue;
+          }
+
+          if (b.isWall) {
+            // Wall Piece
+            ctx.fillStyle = '#78716c';
+            ctx.fillRect(b.x - b.size / 2, b.y - b.size / 2, b.size, b.size);
+            ctx.strokeStyle = '#44403c';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(b.x - b.size / 2, b.y - b.size / 2, b.size, b.size);
+          } else {
+            // Building Base & Shadows
+            ctx.fillStyle = 'rgba(0,0,0,0.35)';
+            ctx.beginPath();
+            ctx.ellipse(b.x, b.y + b.size * 0.45, b.size * 0.65, b.size * 0.35, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Building Structure
+            ctx.fillStyle = b.color;
+            ctx.beginPath();
+            ctx.roundRect(b.x - b.size / 2, b.y - b.size / 2, b.size, b.size, 8);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Icon
+            ctx.font = `${Math.round(b.size * 0.55)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(b.icon, b.x, b.y);
+
+            // Tower Range circle on hover or aiming
+            if (b.target && b.isDefense) {
+              ctx.beginPath();
+              ctx.moveTo(b.x, b.y);
+              ctx.lineTo(b.target.x, b.target.y);
+              ctx.strokeStyle = 'rgba(239, 68, 68, 0.25)';
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+            }
+
+            // Health Bar
+            const barW = b.size;
+            const barH = 5;
+            const barY = b.y - b.size / 2 - 9;
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(b.x - barW / 2, barY, barW, barH);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(b.x - barW / 2, barY, barW * (b.hp / b.maxHp), barH);
+          }
+        }
+
+        // 5. Draw Troops
+        for (let tr of this.troops) {
+          // Drop Shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.beginPath();
+          ctx.ellipse(tr.x, tr.y + 6, 8, 4, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Troop Body
+          ctx.font = '18px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(tr.icon, tr.x, tr.y);
+
+          // Health Bar
+          const barW = 18;
+          const barH = 3;
+          ctx.fillStyle = '#000';
+          ctx.fillRect(tr.x - barW / 2, tr.y - 14, barW, barH);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(tr.x - barW / 2, tr.y - 14, barW * (tr.hp / tr.maxHp), barH);
+        }
+
+        // 6. Draw Projectiles
+        for (let p of this.projectiles) {
+          ctx.save();
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          const drawY = p.isArc ? p.y - p.heightOffset : p.y;
+          ctx.arc(p.x, drawY, p.isArc ? 6 : 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // 7. Draw Particles
+        for (let pt of this.particles) {
+          ctx.fillStyle = pt.color;
+          ctx.globalAlpha = pt.life;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+
+        // 8. Draw Floating Numbers
+        ctx.font = 'bold 12px Rowdies, sans-serif';
+        ctx.textAlign = 'center';
+        for (let ft of this.floatingTexts) {
+          ctx.fillStyle = ft.color;
+          ctx.fillText(ft.text, ft.x, ft.y);
+        }
+
+        ctx.restore();
+      }
+
+      // MAIN LOOP
+      loop(timestamp) {
+        if (!this.lastTime) this.lastTime = timestamp;
+        const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1);
+        this.lastTime = timestamp;
+
+        if (this.isRunning) {
+          this.update(dt);
+        }
+        this.render();
+
+        requestAnimationFrame((t) => this.loop(t));
+      }
+    }
+
+    // Initialize Game Engine on Page Load
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new GameEngine();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>次元防線：終焉協奏 - 2次元動漫塔防</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: 'Chakra Petch', 'Noto Sans TC', sans-serif;
+      background: #08090f;
+      color: #f1f5f9;
+      min-height: 100vh;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+    .hud-glass {
+      background: rgba(13, 19, 36, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.55);
+    }
+    .card-active {
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.65) !important;
+      transform: translateY(-4px);
+    }
+    .anime-btn {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .anime-btn:active {
+      transform: scale(0.96);
+    }
+    @keyframes cutInSlide {
+      0% { transform: translate(-100%, -50%) skewX(-20deg); opacity: 0; }
+      15% { transform: translate(0%, -50%) skewX(-10deg); opacity: 1; }
+      85% { transform: translate(0%, -50%) skewX(-10deg); opacity: 1; }
+      100% { transform: translate(120%, -50%) skewX(-20deg); opacity: 0; }
+    }
+    .cut-in-anim {
+      animation: cutInSlide 1.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.04); }
+    }
+    .pulse-glow {
+      animation: pulseGlow 3s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="relative flex flex-col h-screen w-screen overflow-hidden bg-[#07080f]">
+
+  <!-- ================= SCREEN 1: TITLE / MAIN MENU ================= -->
+  <div id="screenMainMenu" class="absolute inset-0 z-50 flex flex-col items-center justify-between p-6 bg-gradient-to-b from-[#0b0f19] via-[#090b14] to-[#040508]">
+    <div class="absolute w-96 h-96 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none pulse-glow top-1/4 left-1/2 -translate-x-1/2"></div>
+
+    <header class="w-full flex justify-between items-center z-10 max-w-5xl">
+      <div class="flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_#38bdf8]"></span>
+        <span class="text-xs font-bold text-cyan-400 tracking-widest uppercase">DIMENSION DEFENSE v2.0</span>
+      </div>
+      <button id="btnMenuBgm" class="hud-glass px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-cyan-400 flex items-center gap-2">
+        <span>🎵 音樂:</span><span id="menuBgmStatus">關</span>
+      </button>
+    </header>
+
+    <div class="flex flex-col items-center text-center z-10 my-auto">
+      <div class="inline-block px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 text-xs font-black tracking-widest uppercase mb-3 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+        ANIME TACTICAL TOWER DEFENSE
+      </div>
+      <h1 class="text-4xl sm:text-6xl md:text-7xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-sky-100 to-pink-400 drop-shadow-[0_4px_25px_rgba(56,189,248,0.5)]">
+        次元防線
+      </h1>
+      <h2 class="text-xl sm:text-2xl font-black tracking-widest text-pink-400 mt-1 mb-8">
+        — 終焉協奏 FINAL CADENZA —
+      </h2>
+
+      <div class="flex flex-col gap-3.5 w-64 sm:w-72">
+        <button id="btnGoStageSelect" class="anime-btn py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-lg tracking-widest shadow-[0_0_25px_rgba(6,182,212,0.5)] border border-cyan-300/40">
+          作戰開始
+        </button>
+        <button id="btnOpenCodex" class="anime-btn py-3 px-6 rounded-xl hud-glass hover:bg-slate-800 text-cyan-300 font-bold text-sm tracking-wider border border-cyan-500/30">
+          幹員檔案 (圖鑑)
+        </button>
+        <button id="btnResetProgress" class="text-[11px] text-slate-500 hover:text-red-400 transition mt-2">
+          清除戰績存檔
+        </button>
+      </div>
+    </div>
+
+    <footer class="text-slate-500 text-[11px] tracking-wider z-10">
+      2026 戰術指揮部 · 繁體中文終極版
+    </footer>
+  </div>
+
+  <!-- ================= SCREEN 2: STAGE SELECT ================= -->
+  <div id="screenStageSelect" class="absolute inset-0 z-40 flex flex-col justify-between p-4 sm:p-6 bg-[#070913] hidden">
+    <div class="flex items-center justify-between border-b border-cyan-900/40 pb-3">
+      <button id="btnBackToMenu" class="anime-btn px-3 py-1.5 rounded-lg hud-glass text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5">
+        ← 返回主頁
+      </button>
+      <div class="text-center">
+        <h2 class="text-lg sm:text-xl font-black tracking-widest text-cyan-300">戰術作戰區域</h2>
+        <span class="text-[10px] text-slate-400 font-medium">請選擇要部署迎擊的次元裂隙</span>
+      </div>
+      <div class="flex items-center gap-1 text-amber-400 font-bold text-sm">
+        <span>★ 總星數:</span>
+        <span id="totalStarsLabel" class="text-base font-black">0 / 15</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 my-auto max-w-6xl mx-auto w-full py-4 overflow-y-auto">
+      <div class="stage-card p-4 rounded-2xl hud-glass flex flex-col justify-between border transition relative cursor-pointer" data-stage="1">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 font-black border border-cyan-500/30">STAGE 01</span>
+            <div class="stage-stars text-amber-400 text-xs font-black">☆☆☆</div>
+          </div>
+          <h3 class="text-base font-black text-white mb-1">始源空島</h3>
+          <p class="text-[11px] text-slate-400 leading-relaxed mb-3">新手適應作戰。消滅散落於浮島上的量子史萊姆與前哨兵。</p>
+        </div>
+        <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] flex justify-between text-slate-400 font-mono">
+          <span>波次: 4</span>
+          <span class="text-emerald-400">難度: 簡易</span>
+        </div>
+      </div>
+
+      <div class="stage-card p-4 rounded-2xl hud-glass flex flex-col justify-between border transition relative cursor-pointer" data-stage="2">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-black border border-emerald-500/30">STAGE 02</span>
+            <div class="stage-stars text-amber-400 text-xs font-black">☆☆☆</div>
+          </div>
+          <h3 class="text-base font-black text-white mb-1">翡翠迷霧森林</h3>
+          <p class="text-[11px] text-slate-400 leading-relaxed mb-3">曲折雙路徑！高速暗影忍者會在迷霧中突襲防衛核心。</p>
+        </div>
+        <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] flex justify-between text-slate-400 font-mono">
+          <span>波次: 5</span>
+          <span class="text-sky-400">難度: 普通</span>
+        </div>
+      </div>
+
+      <div class="stage-card p-4 rounded-2xl hud-glass flex flex-col justify-between border transition relative cursor-pointer" data-stage="3">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-[10px] px-2 py-0.5 rounded bg-amber-950 text-amber-400 font-black border border-amber-500/30">STAGE 03</span>
+            <div class="stage-stars text-amber-400 text-xs font-black">☆☆☆</div>
+          </div>
+          <h3 class="text-base font-black text-white mb-1">赤紅重工裂谷</h3>
+          <p class="text-[11px] text-slate-400 leading-relaxed mb-3">熔岩流淌的地底熔爐。重型高護甲機兵登場，需善用法術貫穿！</p>
+        </div>
+        <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] flex justify-between text-slate-400 font-mono">
+          <span>波次: 5</span>
+          <span class="text-amber-400">難度: 困難</span>
+        </div>
+      </div>
+
+      <div class="stage-card p-4 rounded-2xl hud-glass flex flex-col justify-between border transition relative cursor-pointer" data-stage="4">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-[10px] px-2 py-0.5 rounded bg-purple-950 text-purple-400 font-black border border-purple-500/30">STAGE 04</span>
+            <div class="stage-stars text-amber-400 text-xs font-black">☆☆☆</div>
+          </div>
+          <h3 class="text-base font-black text-white mb-1">虛空浮游要塞</h3>
+          <p class="text-[11px] text-slate-400 leading-relaxed mb-3">空中獵手無人機大舉壓境！必須依賴蕾娜的對空狙擊防線。</p>
+        </div>
+        <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] flex justify-between text-slate-400 font-mono">
+          <span>波次: 6</span>
+          <span class="text-rose-400">難度: 極限</span>
+        </div>
+      </div>
+
+      <div class="stage-card p-4 rounded-2xl hud-glass flex flex-col justify-between border transition relative cursor-pointer" data-stage="5">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-[10px] px-2 py-0.5 rounded bg-red-950 text-red-400 font-black border border-red-500/30">STAGE 05</span>
+            <div class="stage-stars text-amber-400 text-xs font-black">☆☆☆</div>
+          </div>
+          <h3 class="text-base font-black text-rose-300 mb-1">終焉星核王座</h3>
+          <p class="text-[11px] text-slate-400 leading-relaxed mb-3">終局決戰！多重護盾的虛空毀滅君主現身，隨時釋放能量衝擊！</p>
+        </div>
+        <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] flex justify-between text-slate-400 font-mono">
+          <span>波次: 6 (BOSS)</span>
+          <span class="text-red-500 font-bold">難度: 毀滅</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-center pb-2">
+      <button id="btnLaunchStage" class="anime-btn py-3 px-10 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-black text-base tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+        進入作戰 (STAGE 01)
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 3: OPERATOR CODEX MODAL ================= -->
+  <div id="modalCodex" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+    <div class="w-full max-w-2xl hud-glass rounded-2xl p-5 border border-cyan-500/40 flex flex-col max-h-[90vh]">
+      <div class="flex justify-between items-center pb-3 border-b border-cyan-900/50">
+        <h3 class="text-lg font-black text-cyan-300">特勤作戰幹員檔案庫 (OPERATORS)</h3>
+        <button id="btnCloseCodex" class="text-slate-400 hover:text-white font-black text-sm">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4 overflow-y-auto">
+        <div class="p-3 rounded-xl bg-slate-900/90 border border-red-500/30 flex gap-3">
+          <div class="w-12 h-12 rounded-lg bg-red-600 flex items-center justify-center font-black text-white text-xl">劍</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white text-sm">艾莉絲</span>
+              <span class="text-[10px] text-red-400 bg-red-950/60 px-1.5 py-0.5 rounded">近戰阻截</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">需部署在路徑上阻擋敵人。普攻為超高速物理三段斬。</p>
+            <div class="text-[10px] text-amber-400 font-bold mt-1.5">奧義: 櫻華千刃閃 (大範圍圓形暴風斬擊)</div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/90 border border-sky-500/30 flex gap-3">
+          <div class="w-12 h-12 rounded-lg bg-sky-600 flex items-center justify-center font-black text-white text-xl">術</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white text-sm">賽蓮娜</span>
+              <span class="text-[10px] text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded">群攻減速</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">部署於高台。發射冰霜法球，命中產生爆炸並使敵人緩速。</p>
+            <div class="text-[10px] text-amber-400 font-bold mt-1.5">奧義: 絕對零度封印 (全場急凍冰封 4 秒)</div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/90 border border-emerald-500/30 flex gap-3">
+          <div class="w-12 h-12 rounded-lg bg-emerald-600 flex items-center justify-center font-black text-white text-xl">狙</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white text-sm">蕾娜</span>
+              <span class="text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded">遠程狙殺</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">超廣攻擊半徑。專精擊落飛行無人機與護甲穿透暴擊。</p>
+            <div class="text-[10px] text-amber-400 font-bold mt-1.5">奧義: 終極穿甲狙擊 (對血量最高敵人 800% 貫穿)</div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/90 border border-purple-500/30 flex gap-3">
+          <div class="w-12 h-12 rounded-lg bg-purple-600 flex items-center justify-center font-black text-white text-xl">輔</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white text-sm">菲歐娜</span>
+              <span class="text-[10px] text-purple-400 bg-purple-950/60 px-1.5 py-0.5 rounded">戰術回能</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">大幅加快部隊部署點數(DP)生產速度，並緩慢修復核心。</p>
+            <div class="text-[10px] text-amber-400 font-bold mt-1.5">奧義: 星輝聖光領域 (立即獲得 +25 DP 並回復 3 HP)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-right pt-2 border-t border-slate-800">
+        <button id="btnConfirmCodex" class="anime-btn px-4 py-1.5 rounded-lg bg-cyan-600 text-white font-bold text-xs">我知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 4: BATTLE ARENA ================= -->
+  <div id="screenBattle" class="absolute inset-0 flex flex-col hidden">
+    <header class="w-full px-3 py-2 hud-glass flex items-center justify-between z-30 border-b border-cyan-900/40">
+      <div class="flex items-center gap-3 sm:gap-6">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-red-950/80 border border-red-500/50 flex items-center justify-center text-red-400 font-black text-xs shadow-[0_0_10px_rgba(239,68,68,0.4)]">
+            HP
+          </div>
+          <div class="flex flex-col">
+            <span class="text-[9px] text-slate-400 font-bold uppercase">防衛核心</span>
+            <span id="baseHpText" class="text-sm sm:text-base font-black text-red-400 tracking-wider">20 / 20</span>
+          </div>
+        </div>
+
+        <div class="h-5 w-px bg-cyan-900/50"></div>
+
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-amber-950/80 border border-amber-400/50 flex items-center justify-center text-amber-300 font-black text-xs shadow-[0_0_10px_rgba(251,191,36,0.4)]">
+            DP
+          </div>
+          <div class="flex flex-col">
+            <span class="text-[9px] text-slate-400 font-bold uppercase">部署費用</span>
+            <div class="flex items-baseline gap-1">
+              <span id="dpText" class="text-sm sm:text-base font-black text-amber-300 tracking-wider">25</span>
+              <span class="text-[9px] text-amber-500/80">/ 99</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 bg-slate-900/90 border border-cyan-500/30 px-3 py-1 rounded-full shadow-[0_0_12px_rgba(6,182,212,0.2)]">
+        <span id="currentStageTitle" class="text-xs text-cyan-300 font-black">STAGE 01</span>
+        <span class="text-slate-600">|</span>
+        <span class="text-[10px] text-slate-400 font-bold">波次</span>
+        <span id="waveText" class="text-xs sm:text-sm font-black text-white tracking-wider">1 / 4</span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btnSpeed" class="anime-btn px-2 py-1 rounded-lg bg-slate-800 text-xs font-bold border border-cyan-500/30 text-cyan-300">
+          1x
+        </button>
+        <button id="btnPause" class="anime-btn px-2 py-1 rounded-lg bg-slate-800 text-xs font-bold border border-cyan-500/30 text-amber-300">
+          暫停
+        </button>
+        <button id="btnSurrender" class="anime-btn px-2 py-1 rounded-lg bg-red-950/70 text-xs font-bold border border-red-500/30 text-red-300 hover:bg-red-900">
+          撤退
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 relative overflow-hidden flex items-center justify-center bg-[#06070c]">
+      <canvas id="gameCanvas" class="block w-full h-full cursor-crosshair"></canvas>
+
+      <div id="cutInBanner" class="absolute top-1/2 left-0 w-full pointer-events-none hidden z-40">
+        <div id="cutInStrip" class="w-full py-3.5 bg-gradient-to-r from-red-600/90 via-purple-700/90 to-cyan-500/90 border-y-2 border-cyan-300 shadow-[0_0_35px_rgba(56,189,248,0.7)] flex items-center justify-between px-6 sm:px-12">
+          <div class="flex items-center gap-3">
+            <div id="cutInHeroName" class="text-xs font-black text-cyan-200 tracking-widest">劍聖·艾莉絲</div>
+            <div id="cutInSkillName" class="text-lg sm:text-2xl font-black text-white italic tracking-wider drop-shadow-[0_2px_4px_#000]">奧義 · 櫻華千刃閃！</div>
+          </div>
+          <div class="text-xl sm:text-3xl font-black italic tracking-tighter text-amber-300 opacity-80">EX SKILL !!</div>
+        </div>
+      </div>
+
+      <div id="unitInspectPanel" class="absolute top-3 left-3 hud-glass p-3 rounded-xl border border-cyan-500/40 hidden z-20 flex flex-col gap-2 min-w-[210px] shadow-2xl">
+        <div class="flex items-center justify-between border-b border-cyan-900/50 pb-1.5">
+          <span id="inspectName" class="text-xs font-black text-cyan-300">劍聖·艾莉絲</span>
+          <span id="inspectLevel" class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 font-bold">LV 1</span>
+        </div>
+        <div class="text-[11px] text-slate-300 space-y-0.5 font-mono">
+          <div>攻擊力: <span id="inspectAtk" class="text-emerald-400 font-bold">130</span></div>
+          <div>射程: <span id="inspectRange" class="text-sky-400 font-bold">75</span></div>
+          <div>攻速: <span id="inspectSpd" class="text-amber-400 font-bold">1.2/s</span></div>
+        </div>
+        <div class="flex gap-1.5 mt-1">
+          <button id="btnUpgrade" class="anime-btn flex-1 py-1 px-2 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-[0_0_8px_rgba(6,182,212,0.5)]">
+            升級 (<span id="upgradeCost">15</span> DP)
+          </button>
+          <button id="btnSell" class="anime-btn py-1 px-2 rounded bg-red-900/80 hover:bg-red-800 text-red-200 font-bold text-xs border border-red-500/40">
+            撤退 (<span id="sellRefund">8</span>)
+          </button>
+          <button id="btnCloseInspect" class="p-1 text-slate-400 hover:text-white text-xs font-bold">✕</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="w-full px-2 sm:px-4 py-2 hud-glass z-30 flex items-center justify-center gap-2 sm:gap-4 overflow-x-auto border-t border-cyan-900/40">
+      <div class="hero-card relative p-1.5 sm:p-2 rounded-xl bg-slate-900/80 border border-slate-700 hover:border-red-400 cursor-pointer flex items-center gap-2 min-w-[125px] sm:min-w-[150px] transition" data-hero="alice">
+        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg bg-gradient-to-tr from-red-600 to-rose-400 flex items-center justify-center font-black text-white text-base shadow-md relative overflow-hidden">
+          劍
+          <div class="hero-sp-bar absolute bottom-0 left-0 h-1 bg-amber-400 w-0"></div>
+        </div>
+        <div class="flex flex-col text-left">
+          <span class="text-xs font-bold text-white">艾莉絲</span>
+          <span class="text-[9px] text-red-400">地面近戰</span>
+          <span class="text-xs font-black text-amber-400">12 DP</span>
+        </div>
+        <button class="btn-ex-skill absolute -top-2 -right-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md hidden animate-bounce" data-hero="alice">
+          EX!
+        </button>
+      </div>
+
+      <div class="hero-card relative p-1.5 sm:p-2 rounded-xl bg-slate-900/80 border border-slate-700 hover:border-cyan-400 cursor-pointer flex items-center gap-2 min-w-[125px] sm:min-w-[150px] transition" data-hero="serena">
+        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center font-black text-white text-base shadow-md relative overflow-hidden">
+          術
+          <div class="hero-sp-bar absolute bottom-0 left-0 h-1 bg-amber-400 w-0"></div>
+        </div>
+        <div class="flex flex-col text-left">
+          <span class="text-xs font-bold text-white">賽蓮娜</span>
+          <span class="text-[9px] text-cyan-400">高台群法</span>
+          <span class="text-xs font-black text-amber-400">18 DP</span>
+        </div>
+        <button class="btn-ex-skill absolute -top-2 -right-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md hidden animate-bounce" data-hero="serena">
+          EX!
+        </button>
+      </div>
+
+      <div class="hero-card relative p-1.5 sm:p-2 rounded-xl bg-slate-900/80 border border-slate-700 hover:border-emerald-400 cursor-pointer flex items-center gap-2 min-w-[125px] sm:min-w-[150px] transition" data-hero="reina">
+        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-white text-base shadow-md relative overflow-hidden">
+          狙
+          <div class="hero-sp-bar absolute bottom-0 left-0 h-1 bg-amber-400 w-0"></div>
+        </div>
+        <div class="flex flex-col text-left">
+          <span class="text-xs font-bold text-white">蕾娜</span>
+          <span class="text-[9px] text-emerald-400">高台狙殺</span>
+          <span class="text-xs font-black text-amber-400">14 DP</span>
+        </div>
+        <button class="btn-ex-skill absolute -top-2 -right-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md hidden animate-bounce" data-hero="reina">
+          EX!
+        </button>
+      </div>
+
+      <div class="hero-card relative p-1.5 sm:p-2 rounded-xl bg-slate-900/80 border border-slate-700 hover:border-purple-400 cursor-pointer flex items-center gap-2 min-w-[125px] sm:min-w-[150px] transition" data-hero="fiona">
+        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg bg-gradient-to-tr from-purple-600 to-pink-400 flex items-center justify-center font-black text-white text-base shadow-md relative overflow-hidden">
+          輔
+          <div class="hero-sp-bar absolute bottom-0 left-0 h-1 bg-amber-400 w-0"></div>
+        </div>
+        <div class="flex flex-col text-left">
+          <span class="text-xs font-bold text-white">菲歐娜</span>
+          <span class="text-[9px] text-pink-400">高台回能</span>
+          <span class="text-xs font-black text-amber-400">10 DP</span>
+        </div>
+        <button class="btn-ex-skill absolute -top-2 -right-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md hidden animate-bounce" data-hero="fiona">
+          EX!
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ================= SCREEN 5: VICTORY / DEFEAT MODAL ================= -->
+  <div id="resultModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+    <div class="w-full max-w-sm rounded-2xl bg-slate-900 border border-cyan-500/40 p-6 flex flex-col items-center text-center shadow-[0_0_50px_rgba(6,182,212,0.35)]">
+      <div id="resultIcon" class="w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-3 shadow-lg">🏆</div>
+      <h2 id="resultTitle" class="text-2xl font-black tracking-wider text-cyan-300 mb-1">任務完成！</h2>
+      <p id="resultDesc" class="text-xs text-slate-400 mb-3">成功壓制次元侵蝕，防衛核心完好！</p>
+      
+      <div class="flex items-center gap-1.5 text-2xl text-amber-400 mb-4" id="resultStars">
+        <span>★</span><span>★</span><span>★</span>
+      </div>
+
+      <div class="w-full bg-slate-950/60 rounded-xl p-3 border border-slate-800 space-y-1.5 text-xs text-slate-300 font-mono mb-5">
+        <div class="flex justify-between"><span>擊潰敵軍:</span><span id="statKills" class="font-bold text-cyan-400">0</span></div>
+        <div class="flex justify-between"><span>核心殘餘:</span><span id="statHp" class="font-bold text-red-400">20</span></div>
+        <div class="flex justify-between"><span>獲得戰功:</span><span id="statScore" class="font-bold text-amber-400">0</span></div>
+      </div>
+
+      <div class="flex flex-col gap-2 w-full">
+        <button id="btnNextStage" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black tracking-wider shadow-lg active:scale-95 transition">
+          前往下一作戰區
+        </button>
+        <button id="btnRetryStage" class="w-full py-2 rounded-xl hud-glass hover:bg-slate-800 text-slate-200 font-bold text-xs tracking-wider transition">
+          重試本地圖
+        </button>
+        <button id="btnReturnToSelect" class="w-full py-1.5 text-xs text-slate-400 hover:text-white transition">
+          返回關卡列表
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT ENGINE -->
+  <script>
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.bgmPlaying = false;
+        this.bgmTimer = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      playSword() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(500, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.12);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.12);
+      }
+      playMagic() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(720, now);
+        osc.frequency.exponentialRampToValueAtTime(220, now + 0.22);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.22);
+      }
+      playSniper() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(950, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.15);
+      }
+      playHeal() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99].forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now + i * 0.05);
+          gain.gain.setValueAtTime(0.15, now + i * 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.25);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.05); osc.stop(now + i * 0.05 + 0.25);
+        });
+      }
+      playDeploy() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(330, now);
+        osc.frequency.exponentialRampToValueAtTime(660, now + 0.12);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.15);
+      }
+      playExSkill() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [440, 554.37, 659.25, 880].forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(f, now + i * 0.07);
+          gain.gain.setValueAtTime(0.18, now + i * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.35);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.07); osc.stop(now + i * 0.07 + 0.35);
+        });
+      }
+      toggleBgm() {
+        this.bgmPlaying = !this.bgmPlaying;
+        if (this.bgmPlaying) {
+          this.init();
+          const notes = [220, 261.63, 293.66, 329.63, 392, 440];
+          let step = 0;
+          this.bgmTimer = setInterval(() => {
+            if (!this.bgmPlaying || !this.ctx) return;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(notes[step % notes.length], now);
+            gain.gain.setValueAtTime(0.035, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.start(now); osc.stop(now + 0.35);
+            step++;
+          }, 240);
+        } else {
+          clearInterval(this.bgmTimer);
+        }
+        return this.bgmPlaying;
+      }
+    }
+    const audio = new SoundEngine();
+
+    const HERO_DATA = {
+      alice: {
+        id: 'alice', name: '劍聖·艾莉絲', role: '近戰斬擊', cost: 12,
+        range: 75, damage: 130, attackRate: 1.2, color: '#f43f5e',
+        spMax: 100, exName: '櫻華千刃閃', isMelee: true
+      },
+      serena: {
+        id: 'serena', name: '蒼藍魔導·賽蓮娜', role: '極寒爆破', cost: 18,
+        range: 155, damage: 95, attackRate: 0.75, color: '#38bdf8',
+        spMax: 100, exName: '絕對零度封印', isMelee: false
+      },
+      reina: {
+        id: 'reina', name: '疾風狙擊手·蕾娜', role: '高頻狙殺', cost: 14,
+        range: 240, damage: 180, attackRate: 0.9, color: '#10b981',
+        spMax: 100, exName: '終極穿甲狙擊', isMelee: false
+      },
+      fiona: {
+        id: 'fiona', name: '星輝聖女·菲歐娜', role: '聖光回能', cost: 10,
+        range: 110, damage: 0, attackRate: 0.5, color: '#c084fc',
+        spMax: 80, exName: '星輝聖光領域', isMelee: false
+      }
+    };
+
+    const ENEMY_TYPES = {
+      slime: { name: '量子史萊姆', hp: 380, speed: 1.3, reward: 8, radius: 14, color: '#06b6d4', flying: false },
+      ninja: { name: '暗影疾行兵', hp: 280, speed: 2.3, reward: 10, radius: 12, color: '#a855f7', flying: false },
+      golem: { name: '重裝裝甲機兵', hp: 1300, speed: 0.8, reward: 22, radius: 19, color: '#f59e0b', flying: false, armor: 0.4 },
+      drone: { name: '天驅獵手無人機', hp: 440, speed: 1.6, reward: 12, radius: 13, color: '#10b981', flying: true },
+      boss:  { name: '虛空毀滅君主', hp: 5500, speed: 0.62, reward: 80, radius: 26, color: '#ef4444', isBoss: true, shield: 1500 }
+    };
+
+    const STAGES = {
+      1: {
+        id: 1, title: 'STAGE 01 - 始源空島', theme: 'skyland', roadColor: '#1e293b', bgColor: '#090d16',
+        gridPath: [{ x: 0, y: 4 }, { x: 5, y: 4 }, { x: 5, y: 2 }, { x: 11, y: 2 }, { x: 11, y: 6 }, { x: 16, y: 6 }],
+        waves: [
+          [{ type: 'slime', delay: 25 }, { type: 'slime', delay: 60 }, { type: 'slime', delay: 95 }, { type: 'slime', delay: 130 }],
+          [{ type: 'slime', delay: 20 }, { type: 'ninja', delay: 50 }, { type: 'slime', delay: 80 }, { type: 'ninja', delay: 110 }],
+          [{ type: 'ninja', delay: 20 }, { type: 'ninja', delay: 50 }, { type: 'drone', delay: 90 }, { type: 'drone', delay: 120 }],
+          [{ type: 'golem', delay: 20 }, { type: 'slime', delay: 60 }, { type: 'drone', delay: 100 }, { type: 'golem', delay: 150 }]
+        ]
+      },
+      2: {
+        id: 2, title: 'STAGE 02 - 翡翠迷霧森林', theme: 'forest', roadColor: '#142e2b', bgColor: '#061412',
+        gridPath: [{ x: 0, y: 2 }, { x: 4, y: 2 }, { x: 4, y: 6 }, { x: 8, y: 6 }, { x: 8, y: 2 }, { x: 12, y: 2 }, { x: 12, y: 7 }, { x: 16, y: 7 }],
+        waves: [
+          [{ type: 'slime', delay: 20 }, { type: 'ninja', delay: 45 }, { type: 'ninja', delay: 70 }, { type: 'ninja', delay: 95 }],
+          [{ type: 'ninja', delay: 20 }, { type: 'drone', delay: 45 }, { type: 'ninja', delay: 70 }, { type: 'drone', delay: 95 }],
+          [{ type: 'golem', delay: 20 }, { type: 'slime', delay: 50 }, { type: 'slime', delay: 75 }, { type: 'golem', delay: 120 }],
+          [{ type: 'ninja', delay: 15 }, { type: 'ninja', delay: 35 }, { type: 'drone', delay: 55 }, { type: 'ninja', delay: 75 }, { type: 'drone', delay: 95 }],
+          [{ type: 'golem', delay: 20 }, { type: 'golem', delay: 60 }, { type: 'drone', delay: 90 }, { type: 'ninja', delay: 120 }, { type: 'golem', delay: 150 }]
+        ]
+      },
+      3: {
+        id: 3, title: 'STAGE 03 - 赤紅重工裂谷', theme: 'foundry', roadColor: '#341a1a', bgColor: '#170909',
+        gridPath: [{ x: 0, y: 7 }, { x: 5, y: 7 }, { x: 5, y: 3 }, { x: 11, y: 3 }, { x: 11, y: 7 }, { x: 16, y: 7 }],
+        waves: [
+          [{ type: 'slime', delay: 20 }, { type: 'golem', delay: 50 }, { type: 'slime', delay: 90 }],
+          [{ type: 'golem', delay: 20 }, { type: 'golem', delay: 60 }, { type: 'drone', delay: 100 }],
+          [{ type: 'ninja', delay: 15 }, { type: 'ninja', delay: 35 }, { type: 'golem', delay: 70 }, { type: 'golem', delay: 110 }],
+          [{ type: 'drone', delay: 20 }, { type: 'drone', delay: 50 }, { type: 'golem', delay: 80 }, { type: 'drone', delay: 110 }, { type: 'golem', delay: 140 }],
+          [{ type: 'golem', delay: 20 }, { type: 'golem', delay: 50 }, { type: 'golem', delay: 80 }, { type: 'drone', delay: 110 }, { type: 'ninja', delay: 130 }]
+        ]
+      },
+      4: {
+        id: 4, title: 'STAGE 04 - 虛空浮游要塞', theme: 'void', roadColor: '#26173a', bgColor: '#0d0718',
+        gridPath: [{ x: 0, y: 1 }, { x: 8, y: 1 }, { x: 8, y: 5 }, { x: 3, y: 5 }, { x: 3, y: 7 }, { x: 16, y: 7 }],
+        waves: [
+          [{ type: 'drone', delay: 20 }, { type: 'drone', delay: 50 }, { type: 'drone', delay: 80 }, { type: 'ninja', delay: 110 }],
+          [{ type: 'drone', delay: 15 }, { type: 'ninja', delay: 35 }, { type: 'drone', delay: 55 }, { type: 'drone', delay: 75 }],
+          [{ type: 'golem', delay: 20 }, { type: 'drone', delay: 50 }, { type: 'drone', delay: 80 }, { type: 'golem', delay: 110 }],
+          [{ type: 'ninja', delay: 15 }, { type: 'ninja', delay: 30 }, { type: 'ninja', delay: 45 }, { type: 'drone', delay: 65 }, { type: 'drone', delay: 85 }],
+          [{ type: 'drone', delay: 15 }, { type: 'drone', delay: 35 }, { type: 'drone', delay: 55 }, { type: 'drone', delay: 75 }, { type: 'golem', delay: 110 }],
+          [{ type: 'golem', delay: 20 }, { type: 'golem', delay: 60 }, { type: 'drone', delay: 90 }, { type: 'drone', delay: 110 }, { type: 'ninja', delay: 130 }]
+        ]
+      },
+      5: {
+        id: 5, title: 'STAGE 05 - 終焉星核王座', theme: 'apex', roadColor: '#2b1020', bgColor: '#10050c',
+        gridPath: [{ x: 0, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 1 }, { x: 12, y: 1 }, { x: 12, y: 7 }, { x: 8, y: 7 }, { x: 8, y: 4 }, { x: 16, y: 4 }],
+        waves: [
+          [{ type: 'slime', delay: 20 }, { type: 'ninja', delay: 45 }, { type: 'golem', delay: 75 }],
+          [{ type: 'drone', delay: 20 }, { type: 'drone', delay: 45 }, { type: 'ninja', delay: 70 }, { type: 'golem', delay: 95 }],
+          [{ type: 'golem', delay: 20 }, { type: 'golem', delay: 50 }, { type: 'drone', delay: 80 }, { type: 'drone', delay: 110 }],
+          [{ type: 'ninja', delay: 15 }, { type: 'ninja', delay: 30 }, { type: 'drone', delay: 50 }, { type: 'golem', delay: 80 }],
+          [{ type: 'golem', delay: 20 }, { type: 'golem', delay: 50 }, { type: 'drone', delay: 80 }, { type: 'ninja', delay: 100 }, { type: 'ninja', delay: 120 }],
+          [{ type: 'drone', delay: 20 }, { type: 'boss', delay: 60 }, { type: 'golem', delay: 120 }, { type: 'ninja', delay: 150 }]
+        ]
+      }
+    };
+
+    class Tower {
+      constructor(gx, gy, heroId, data, game) {
+        this.gx = gx;
+        this.gy = gy;
+        this.heroId = heroId;
+        this.data = data;
+        this.game = game;
+        this.cx = gx * game.tileW + game.tileW / 2;
+        this.cy = gy * game.tileH + game.tileH / 2;
+        this.level = 1;
+        this.range = data.range;
+        this.damage = data.damage;
+        this.attackCooldown = 1 / data.attackRate;
+        this.cooldownTimer = 0;
+        this.sp = 25;
+        this.spMax = data.spMax;
+        this.upgradeCost = Math.round(data.cost * 1.2);
+        this.sellValue = Math.round(data.cost * 0.7);
+        this.animTimer = Math.random() * 10;
+        this.swingAngle = 0;
+      }
+      recalcPos() {
+        this.cx = this.gx * this.game.tileW + this.game.tileW / 2;
+        this.cy = this.gy * this.game.tileH + this.game.tileH / 2;
+      }
+      levelUp() {
+        this.level++;
+        this.damage = Math.round(this.damage * 1.35);
+        this.range = Math.round(this.range * 1.1);
+        this.upgradeCost = Math.round(this.upgradeCost * 1.4);
+        this.sellValue += Math.round(this.upgradeCost * 0.4);
+      }
+      update(dt) {
+        this.animTimer += dt * 5;
+        this.cooldownTimer -= dt;
+        if (this.sp < this.spMax) this.sp = Math.min(this.spMax, this.sp + dt * 6);
+        if (this.cooldownTimer <= 0) this.act();
+        this.swingAngle *= 0.85;
+      }
+      act() {
+        if (this.heroId === 'fiona') {
+          this.game.dp = Math.min(99, this.game.dp + 0.9);
+          audio.playHeal();
+          this.cooldownTimer = this.attackCooldown;
+          return;
+        }
+        let target = null;
+        let maxProgress = -1;
+        for (const e of this.game.enemies) {
+          const dist = Math.hypot(e.x - this.cx, e.y - this.cy);
+          if (dist <= this.range && e.progress > maxProgress) {
+            maxProgress = e.progress;
+            target = e;
+          }
+        }
+        if (target) {
+          this.fire(target);
+          this.cooldownTimer = this.attackCooldown;
+        }
+      }
+      fire(target) {
+        this.swingAngle = 0.6;
+        if (this.heroId === 'alice') {
+          audio.playSword();
+          target.takeDamage(this.damage);
+          this.game.showFloatingText(`-${Math.round(this.damage)}`, target.x, target.y - 12, '#f43f5e');
+          for (let i = 0; i < 6; i++) this.game.particles.push(new Particle(target.x, target.y, '#f43f5e'));
+        } else if (this.heroId === 'serena') {
+          audio.playMagic();
+          this.game.projectiles.push(new Projectile(this.cx, this.cy, target, 'aoe', this.damage, this.data.color, this.game));
+        } else if (this.heroId === 'reina') {
+          audio.playSniper();
+          const isCrit = Math.random() < 0.35;
+          const dmg = isCrit ? this.damage * 1.8 : this.damage;
+          this.game.projectiles.push(new Projectile(this.cx, this.cy, target, 'sniper', dmg, this.data.color, this.game, isCrit));
+        }
+      }
+      draw(ctx) {
+        if (this.game.inspectedTower === this) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(this.cx, this.cy, this.range, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 4]);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+        ctx.save();
+        ctx.translate(this.cx, this.cy);
+        ctx.beginPath();
+        ctx.ellipse(0, 14, 18, 9, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fill();
+        ctx.strokeStyle = this.data.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        const breath = Math.sin(this.animTimer) * 2;
+        ctx.translate(0, breath);
+
+        ctx.beginPath();
+        ctx.arc(0, -2, 12, 0, Math.PI);
+        ctx.fillStyle = this.data.color;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(0, -12, 9, 0, Math.PI * 2);
+        ctx.fillStyle = '#fed7aa';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(0, -14, 10, Math.PI, Math.PI * 2);
+        ctx.fillStyle = this.heroId === 'alice' ? '#fda4af' : (this.heroId === 'serena' ? '#67e8f9' : '#fef08a');
+        ctx.fill();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(-4, -13, 2, 3);
+        ctx.fillRect(2, -13, 2, 3);
+
+        ctx.rotate(this.swingAngle);
+        if (this.heroId === 'alice') {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(8, -2); ctx.lineTo(18, -18); ctx.stroke();
+        } else if (this.heroId === 'serena') {
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath(); ctx.arc(12, -10, 4, 0, Math.PI * 2); ctx.fill();
+        } else if (this.heroId === 'reina') {
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.moveTo(4, -8); ctx.lineTo(16, -8); ctx.stroke();
+        } else if (this.heroId === 'fiona') {
+          ctx.strokeStyle = '#e879f9';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(8, -14, 8, 8);
+        }
+        ctx.restore();
+
+        const spWidth = 24;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(this.cx - spWidth / 2, this.cy - 30, spWidth, 3);
+        ctx.fillStyle = this.sp >= this.spMax ? '#facc15' : '#38bdf8';
+        ctx.fillRect(this.cx - spWidth / 2, this.cy - 30, (this.sp / this.spMax) * spWidth, 3);
+      }
+    }
+
+    class Enemy {
+      constructor(typeKey, game) {
+        this.game = game;
+        this.typeKey = typeKey;
+        const proto = ENEMY_TYPES[typeKey];
+        this.name = proto.name;
+        this.maxHp = proto.hp;
+        this.hp = proto.hp;
+        this.speed = proto.speed;
+        this.reward = proto.reward;
+        this.radius = proto.radius;
+        this.color = proto.color;
+        this.armor = proto.armor || 0;
+        this.isBoss = !!proto.isBoss;
+        this.shield = proto.shield || 0;
+        this.waypointIndex = 0;
+        this.progress = 0;
+        const start = game.stageConfig.gridPath[0];
+        this.x = start.x * game.tileW + game.tileW / 2;
+        this.y = start.y * game.tileH + game.tileH / 2;
+        this.frozenTimer = 0;
+      }
+      update(dt) {
+        if (this.frozenTimer > 0) {
+          this.frozenTimer -= dt * 60;
+          return true;
+        }
+        const path = this.game.stageConfig.gridPath;
+        if (this.waypointIndex >= path.length - 1) {
+          this.game.baseHp = Math.max(0, this.game.baseHp - (this.isBoss ? 6 : 1));
+          this.game.updateHUD();
+          audio.playSword();
+          if (this.game.baseHp <= 0) this.game.endGame(false);
+          return false;
+        }
+        const targetNode = path[this.waypointIndex + 1];
+        const tx = targetNode.x * this.game.tileW + this.game.tileW / 2;
+        const ty = targetNode.y * this.game.tileH + this.game.tileH / 2;
+        const dx = tx - this.x;
+        const dy = ty - this.y;
+        const dist = Math.hypot(dx, dy);
+        const step = this.speed * dt * 60;
+        if (dist <= step) {
+          this.x = tx;
+          this.y = ty;
+          this.waypointIndex++;
+        } else {
+          this.x += (dx / dist) * step;
+          this.y += (dy / dist) * step;
+          this.progress += step;
+        }
+        return true;
+      }
+      takeDamage(amount) {
+        let net = amount * (1 - this.armor);
+        if (this.shield > 0) {
+          const sHit = Math.min(this.shield, net);
+          this.shield -= sHit;
+          net -= sHit;
+        }
+        this.hp -= net;
+        if (this.hp <= 0) {
+          this.game.dp = Math.min(99, this.game.dp + this.reward);
+          this.game.kills++;
+          this.game.score += this.reward * 10;
+          this.game.updateHUD();
+          for (let i = 0; i < 12; i++) this.game.particles.push(new Particle(this.x, this.y, this.color));
+        }
+      }
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        if (this.frozenTimer > 0) {
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+          ctx.fill();
+        }
+        ctx.beginPath();
+        if (this.typeKey === 'slime') ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        else if (this.typeKey === 'ninja') {
+          ctx.moveTo(0, -this.radius); ctx.lineTo(this.radius, 0); ctx.lineTo(0, this.radius); ctx.lineTo(-this.radius, 0); ctx.closePath();
+        } else if (this.typeKey === 'golem') {
+          for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI) / 3;
+            const px = Math.cos(angle) * this.radius;
+            const py = Math.sin(angle) * this.radius;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+        } else if (this.typeKey === 'drone') {
+          ctx.moveTo(0, -this.radius); ctx.lineTo(this.radius, this.radius); ctx.lineTo(-this.radius, this.radius); ctx.closePath();
+        } else if (this.isBoss) {
+          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        }
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+
+        const barW = this.radius * 2.2;
+        const hpPercent = Math.max(0, this.hp / this.maxHp);
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(this.x - barW / 2, this.y - this.radius - 8, barW, 4);
+        ctx.fillStyle = this.isBoss ? '#f43f5e' : '#22c55e';
+        ctx.fillRect(this.x - barW / 2, this.y - this.radius - 8, barW * hpPercent, 4);
+      }
+    }
+
+    class Projectile {
+      constructor(x, y, target, type, damage, color, game, isCrit = false) {
+        this.x = x; this.y = y; this.target = target; this.type = type;
+        this.damage = damage; this.color = color; this.game = game;
+        this.isCrit = isCrit; this.speed = type === 'sniper' ? 14 : 7;
+      }
+      update(dt) {
+        if (!this.game.enemies.includes(this.target)) return false;
+        const dx = this.target.x - this.x;
+        const dy = this.target.y - this.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= this.speed) {
+          this.hit();
+          return false;
+        }
+        this.x += (dx / dist) * this.speed;
+        this.y += (dy / dist) * this.speed;
+        return true;
+      }
+      hit() {
+        if (this.type === 'aoe') {
+          this.game.enemies.forEach(e => {
+            const d = Math.hypot(e.x - this.target.x, e.y - this.target.y);
+            if (d < 65) {
+              e.takeDamage(this.damage);
+              e.frozenTimer = 60;
+              this.game.showFloatingText(`-${Math.round(this.damage)}`, e.x, e.y - 10, '#38bdf8');
+            }
+          });
+          for (let i = 0; i < 12; i++) this.game.particles.push(new Particle(this.target.x, this.target.y, '#38bdf8'));
+        } else {
+          this.target.takeDamage(this.damage);
+          this.game.showFloatingText(
+            `${this.isCrit ? 'CRIT! ' : ''}-${Math.round(this.damage)}`,
+            this.target.x, this.target.y - 10,
+            this.isCrit ? '#f59e0b' : '#10b981',
+            this.isCrit
+          );
+        }
+      }
+      draw(ctx) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.type === 'sniper' ? 4 : 6, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x; this.y = y; this.color = color;
+        const angle = Math.random() * Math.PI * 2;
+        const spd = 1.5 + Math.random() * 4;
+        this.vx = Math.cos(angle) * spd;
+        this.vy = Math.sin(angle) * spd;
+        this.life = 20 + Math.random() * 15;
+        this.maxLife = this.life;
+        this.radius = 2 + Math.random() * 3;
+      }
+      update() {
+        this.x += this.vx; this.y += this.vy; this.life--;
+        return this.life > 0;
+      }
+      draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.life / this.maxLife;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    class TowerDefense {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.cols = 16;
+        this.rows = 9;
+        this.tileW = 0;
+        this.tileH = 0;
+
+        this.progress = this.loadProgress();
+        this.currentStageId = 1;
+        this.stageConfig = STAGES[1];
+
+        this.baseHp = 20;
+        this.maxBaseHp = 20;
+        this.dp = 25;
+        this.wave = 1;
+        this.maxWave = 4;
+        this.gameSpeed = 1;
+        this.isPaused = false;
+        this.isOver = false;
+        this.kills = 0;
+        this.score = 0;
+
+        this.towers = [];
+        this.enemies = [];
+        this.projectiles = [];
+        this.particles = [];
+        this.floatingTexts = [];
+
+        this.selectedHeroType = null;
+        this.inspectedTower = null;
+
+        this.waveTimer = 0;
+        this.spawnQueue = [];
+        this.waveInProgress = false;
+
+        this.init();
+      }
+
+      loadProgress() {
+        try {
+          const saved = localStorage.getItem('dimension_defense_prog');
+          if (saved) return JSON.parse(saved);
+        } catch (e) {}
+        return { unlockedMax: 1, stars: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+      }
+
+      saveProgress() {
+        try {
+          localStorage.setItem('dimension_defense_prog', JSON.stringify(this.progress));
+        } catch (e) {}
+      }
+
+      init() {
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.setupNavigation();
+        this.setupBattleControls();
+        this.updateStageSelectUI();
+        this.loop();
+      }
+
+      resize() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = rect.width || window.innerWidth;
+        this.canvas.height = rect.height || (window.innerHeight - 120);
+        this.tileW = this.canvas.width / this.cols;
+        this.tileH = this.canvas.height / this.rows;
+
+        if (this.towers) {
+          this.towers.forEach(t => t.recalcPos());
+        }
+      }
+
+      setupNavigation() {
+        document.getElementById('btnGoStageSelect').addEventListener('click', () => {
+          audio.init();
+          document.getElementById('screenMainMenu').classList.add('hidden');
+          document.getElementById('screenStageSelect').classList.remove('hidden');
+          this.updateStageSelectUI();
+        });
+
+        document.getElementById('btnMenuBgm').addEventListener('click', () => {
+          const on = audio.toggleBgm();
+          document.getElementById('menuBgmStatus').innerText = on ? '開' : '關';
+        });
+
+        document.getElementById('btnOpenCodex').addEventListener('click', () => {
+          audio.init();
+          document.getElementById('modalCodex').classList.remove('hidden');
+        });
+        document.getElementById('btnCloseCodex').addEventListener('click', () => {
+          document.getElementById('modalCodex').classList.add('hidden');
+        });
+        document.getElementById('btnConfirmCodex').addEventListener('click', () => {
+          document.getElementById('modalCodex').classList.add('hidden');
+        });
+
+        document.getElementById('btnResetProgress').addEventListener('click', () => {
+          this.progress = { unlockedMax: 1, stars: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+          this.saveProgress();
+          this.updateStageSelectUI();
+        });
+
+        document.getElementById('btnBackToMenu').addEventListener('click', () => {
+          document.getElementById('screenStageSelect').classList.add('hidden');
+          document.getElementById('screenMainMenu').classList.remove('hidden');
+        });
+
+        document.querySelectorAll('.stage-card').forEach(card => {
+          card.addEventListener('click', () => {
+            const sid = parseInt(card.dataset.stage);
+            if (sid <= this.progress.unlockedMax) {
+              this.currentStageId = sid;
+              this.updateStageSelectUI();
+            }
+          });
+        });
+
+        document.getElementById('btnLaunchStage').addEventListener('click', () => {
+          this.launchStage(this.currentStageId);
+        });
+
+        document.getElementById('btnNextStage').addEventListener('click', () => {
+          document.getElementById('resultModal').classList.add('hidden');
+          if (this.currentStageId < 5) {
+            this.launchStage(this.currentStageId + 1);
+          } else {
+            this.quitToStageSelect();
+          }
+        });
+        document.getElementById('btnRetryStage').addEventListener('click', () => {
+          document.getElementById('resultModal').classList.add('hidden');
+          this.launchStage(this.currentStageId);
+        });
+        document.getElementById('btnReturnToSelect').addEventListener('click', () => {
+          document.getElementById('resultModal').classList.add('hidden');
+          this.quitToStageSelect();
+        });
+        document.getElementById('btnSurrender').addEventListener('click', () => {
+          this.endGame(false);
+        });
+      }
+
+      updateStageSelectUI() {
+        let totalStars = 0;
+        document.querySelectorAll('.stage-card').forEach(card => {
+          const sid = parseInt(card.dataset.stage);
+          const unlocked = sid <= this.progress.unlockedMax;
+          const starsEarned = this.progress.stars[sid] || 0;
+          totalStars += starsEarned;
+
+          const starLabel = card.querySelector('.stage-stars');
+          starLabel.innerText = '★'.repeat(starsEarned) + '☆'.repeat(3 - starsEarned);
+
+          if (!unlocked) {
+            card.classList.add('opacity-40', 'grayscale', 'cursor-not-allowed');
+            card.classList.remove('border-cyan-400', 'shadow-[0_0_15px_rgba(56,189,248,0.3)]');
+          } else {
+            card.classList.remove('opacity-40', 'grayscale', 'cursor-not-allowed');
+            if (sid === this.currentStageId) {
+              card.classList.add('border-cyan-400', 'shadow-[0_0_15px_rgba(56,189,248,0.3)]');
+            } else {
+              card.classList.remove('border-cyan-400', 'shadow-[0_0_15px_rgba(56,189,248,0.3)]');
+            }
+          }
+        });
+
+        document.getElementById('totalStarsLabel').innerText = `${totalStars} / 15`;
+        const launchBtn = document.getElementById('btnLaunchStage');
+        launchBtn.innerText = `進入作戰 (${STAGES[this.currentStageId].title.split(' - ')[0]})`;
+      }
+
+      launchStage(stageId) {
+        this.currentStageId = stageId;
+        this.stageConfig = STAGES[stageId];
+        document.getElementById('screenStageSelect').classList.add('hidden');
+        document.getElementById('screenBattle').classList.remove('hidden');
+        document.getElementById('currentStageTitle').innerText = this.stageConfig.title;
+
+        // 關鍵修復：等待 DOM 渲染完成後再重新計算 Canvas 寬高
+        requestAnimationFrame(() => {
+          this.resize();
+          this.resetBattle();
+        });
+      }
+
+      quitToStageSelect() {
+        document.getElementById('screenBattle').classList.add('hidden');
+        document.getElementById('screenStageSelect').classList.remove('hidden');
+        this.updateStageSelectUI();
+      }
+
+      resetBattle() {
+        this.baseHp = 20;
+        this.maxBaseHp = 20;
+        this.dp = 25;
+        this.wave = 1;
+        this.maxWave = this.stageConfig.waves.length;
+        this.kills = 0;
+        this.score = 0;
+        this.isOver = false;
+        this.isPaused = false;
+        this.gameSpeed = 1;
+
+        this.towers = [];
+        this.enemies = [];
+        this.projectiles = [];
+        this.particles = [];
+        this.floatingTexts = [];
+        this.closeInspect();
+
+        document.getElementById('btnSpeed').innerText = '1x';
+        document.getElementById('btnPause').innerText = '暫停';
+
+        this.startWave(1);
+        this.updateHUD();
+      }
+
+      setupBattleControls() {
+        document.querySelectorAll('.hero-card').forEach(card => {
+          card.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-ex-skill')) return;
+            const heroId = card.dataset.hero;
+            if (this.selectedHeroType === heroId) {
+              this.selectedHeroType = null;
+              card.classList.remove('card-active');
+            } else {
+              document.querySelectorAll('.hero-card').forEach(c => c.classList.remove('card-active'));
+              this.selectedHeroType = heroId;
+              card.classList.add('card-active');
+            }
+          });
+        });
+
+        document.querySelectorAll('.btn-ex-skill').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const heroId = btn.dataset.hero;
+            const tower = this.towers.find(t => t.heroId === heroId && t.sp >= t.spMax);
+            if (tower) this.triggerExSkill(tower);
+          });
+        });
+
+        this.canvas.addEventListener('click', (e) => {
+          audio.init();
+          const r = this.canvas.getBoundingClientRect();
+          const mx = e.clientX - r.left;
+          const my = e.clientY - r.top;
+          const gridX = Math.floor(mx / this.tileW);
+          const gridY = Math.floor(my / this.tileH);
+
+          const existing = this.towers.find(t => t.gx === gridX && t.gy === gridY);
+          if (existing) {
+            this.inspectTower(existing);
+            return;
+          }
+
+          if (this.selectedHeroType) {
+            this.tryDeploy(gridX, gridY, this.selectedHeroType);
+          } else {
+            this.closeInspect();
+          }
+        });
+
+        document.getElementById('btnCloseInspect').addEventListener('click', () => this.closeInspect());
+        document.getElementById('btnUpgrade').addEventListener('click', () => {
+          if (this.inspectedTower && this.dp >= this.inspectedTower.upgradeCost) {
+            this.dp -= this.inspectedTower.upgradeCost;
+            this.inspectedTower.levelUp();
+            this.inspectTower(this.inspectedTower);
+            audio.playDeploy();
+            this.updateHUD();
+          }
+        });
+        document.getElementById('btnSell').addEventListener('click', () => {
+          if (this.inspectedTower) {
+            this.dp += this.inspectedTower.sellValue;
+            this.towers = this.towers.filter(t => t !== this.inspectedTower);
+            this.closeInspect();
+            this.updateHUD();
+          }
+        });
+
+        document.getElementById('btnSpeed').addEventListener('click', () => {
+          this.gameSpeed = this.gameSpeed === 1 ? 2 : 1;
+          document.getElementById('btnSpeed').innerText = `${this.gameSpeed}x`;
+          document.getElementById('btnSpeed').classList.toggle('text-amber-400', this.gameSpeed === 2);
+        });
+
+        document.getElementById('btnPause').addEventListener('click', () => {
+          this.isPaused = !this.isPaused;
+          document.getElementById('btnPause').innerText = this.isPaused ? '繼續' : '暫停';
+        });
+      }
+
+      isTileOnRoad(gx, gy) {
+        const path = this.stageConfig.gridPath;
+        for (let i = 0; i < path.length - 1; i++) {
+          const p1 = path[i];
+          const p2 = path[i + 1];
+          const minX = Math.min(p1.x, p2.x);
+          const maxX = Math.max(p1.x, p2.x);
+          const minY = Math.min(p1.y, p2.y);
+          const maxY = Math.max(p1.y, p2.y);
+          if (gx >= minX && gx <= maxX && gy >= minY && gy <= maxY) return true;
+        }
+        return false;
+      }
+
+      tryDeploy(gx, gy, heroId) {
+        const hData = HERO_DATA[heroId];
+        if (this.dp < hData.cost) {
+          this.showFloatingText('DP不足!', gx * this.tileW + this.tileW / 2, gy * this.tileH, '#ef4444');
+          return;
+        }
+
+        const onRoad = this.isTileOnRoad(gx, gy);
+        if (hData.isMelee && !onRoad) {
+          this.showFloatingText('劍聖需部署於路徑上攔截!', gx * this.tileW + this.tileW / 2, gy * this.tileH, '#f43f5e');
+          return;
+        }
+        if (!hData.isMelee && onRoad) {
+          this.showFloatingText('遠程幹員需部署於高台!', gx * this.tileW + this.tileW / 2, gy * this.tileH, '#38bdf8');
+          return;
+        }
+
+        this.dp -= hData.cost;
+        const tower = new Tower(gx, gy, heroId, hData, this);
+        this.towers.push(tower);
+        audio.playDeploy();
+
+        for (let i = 0; i < 16; i++) {
+          this.particles.push(new Particle(gx * this.tileW + this.tileW / 2, gy * this.tileH + this.tileH / 2, hData.color));
+        }
+
+        this.updateHUD();
+      }
+
+      inspectTower(tower) {
+        this.inspectedTower = tower;
+        const p = document.getElementById('unitInspectPanel');
+        p.classList.remove('hidden');
+        document.getElementById('inspectName').innerText = tower.data.name;
+        document.getElementById('inspectLevel').innerText = `LV ${tower.level}`;
+        document.getElementById('inspectAtk').innerText = Math.round(tower.damage);
+        document.getElementById('inspectRange').innerText = Math.round(tower.range);
+        document.getElementById('inspectSpd').innerText = (1 / tower.attackCooldown).toFixed(1) + '/s';
+        document.getElementById('upgradeCost').innerText = tower.upgradeCost;
+        document.getElementById('sellRefund').innerText = tower.sellValue;
+      }
+
+      closeInspect() {
+        this.inspectedTower = null;
+        document.getElementById('unitInspectPanel').classList.add('hidden');
+      }
+
+      triggerExSkill(tower) {
+        tower.sp = 0;
+        audio.playExSkill();
+
+        const banner = document.getElementById('cutInBanner');
+        const strip = document.getElementById('cutInStrip');
+        document.getElementById('cutInHeroName').innerText = tower.data.name;
+        document.getElementById('cutInSkillName').innerText = `奧義 · ${tower.data.exName}！`;
+        strip.classList.remove('cut-in-anim');
+        void strip.offsetWidth;
+        strip.classList.add('cut-in-anim');
+        banner.classList.remove('hidden');
+        setTimeout(() => banner.classList.add('hidden'), 1300);
+
+        if (tower.heroId === 'alice') {
+          this.enemies.forEach(e => {
+            const dist = Math.hypot(e.x - tower.cx, e.y - tower.cy);
+            if (dist < tower.range * 1.8) {
+              e.takeDamage(tower.damage * 3.8);
+              this.showFloatingText(`-${Math.round(tower.damage * 3.8)}`, e.x, e.y - 10, '#f43f5e', true);
+            }
+          });
+        } else if (tower.heroId === 'serena') {
+          this.enemies.forEach(e => {
+            e.frozenTimer = 240;
+            e.takeDamage(140);
+          });
+        } else if (tower.heroId === 'reina') {
+          let target = null;
+          let maxHp = -1;
+          this.enemies.forEach(e => {
+            if (e.hp > maxHp) { maxHp = e.hp; target = e; }
+          });
+          if (target) {
+            target.takeDamage(tower.damage * 8.5);
+            this.showFloatingText(`CRIT! -${Math.round(tower.damage * 8.5)}`, target.x, target.y - 15, '#10b981', true);
+          }
+        } else if (tower.heroId === 'fiona') {
+          this.dp = Math.min(99, this.dp + 25);
+          this.baseHp = Math.min(this.maxBaseHp, this.baseHp + 3);
+          this.showFloatingText('+25 DP / +3 HP', tower.cx, tower.cy - 15, '#c084fc');
+        }
+
+        this.updateHUD();
+      }
+
+      startWave(waveNum) {
+        this.wave = waveNum;
+        this.waveInProgress = true;
+        this.waveTimer = 0;
+        const waveRaw = this.stageConfig.waves[waveNum - 1] || [];
+        this.spawnQueue = waveRaw.map(item => ({ ...item }));
+        this.updateHUD();
+      }
+
+      showFloatingText(text, x, y, color = '#ffffff', isCrit = false) {
+        this.floatingTexts.push({
+          text, x, y, color, isCrit,
+          alpha: 1.0,
+          vy: -1.2,
+          life: 40
+        });
+      }
+
+      updateHUD() {
+        document.getElementById('baseHpText').innerText = `${this.baseHp} / ${this.maxBaseHp}`;
+        document.getElementById('dpText').innerText = Math.floor(this.dp);
+        document.getElementById('waveText').innerText = `${this.wave} / ${this.maxWave}`;
+
+        this.towers.forEach(t => {
+          const btn = document.querySelector(`.btn-ex-skill[data-hero="${t.heroId}"]`);
+          if (btn) {
+            if (t.sp >= t.spMax) btn.classList.remove('hidden');
+            else btn.classList.add('hidden');
+          }
+          const card = document.querySelector(`.hero-card[data-hero="${t.heroId}"]`);
+          if (card) {
+            const bar = card.querySelector('.hero-sp-bar');
+            if (bar) bar.style.width = `${Math.min(100, (t.sp / t.spMax) * 100)}%`;
+          }
+        });
+      }
+
+      endGame(isWin) {
+        this.isOver = true;
+        const modal = document.getElementById('resultModal');
+        const title = document.getElementById('resultTitle');
+        const desc = document.getElementById('resultDesc');
+        const icon = document.getElementById('resultIcon');
+        const starsContainer = document.getElementById('resultStars');
+        const nextBtn = document.getElementById('btnNextStage');
+        modal.classList.remove('hidden');
+
+        if (isWin) {
+          let stars = 1;
+          if (this.baseHp >= 18) stars = 3;
+          else if (this.baseHp >= 10) stars = 2;
+
+          const sid = this.currentStageId;
+          this.progress.stars[sid] = Math.max(this.progress.stars[sid] || 0, stars);
+          if (sid < 5 && this.progress.unlockedMax < sid + 1) {
+            this.progress.unlockedMax = sid + 1;
+          }
+          this.saveProgress();
+
+          title.innerText = '作戰大捷 · 守護成功！';
+          title.className = 'text-2xl font-black tracking-wider text-cyan-400 mb-1';
+          desc.innerText = '防線完好，成功擊退此區域的所有次元魔靈！';
+          icon.innerText = '👑';
+          icon.className = 'w-16 h-16 rounded-full bg-cyan-950 border border-cyan-400 flex items-center justify-center text-3xl mb-3 shadow-[0_0_20px_rgba(6,182,212,0.5)]';
+          starsContainer.innerHTML = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+          nextBtn.classList.remove('hidden');
+          if (sid === 5) {
+            nextBtn.innerText = '完成全部關卡 (返回主頁)';
+          } else {
+            nextBtn.innerText = '前往下一作戰區';
+          }
+        } else {
+          title.innerText = '防線崩潰 · 任務失敗';
+          title.className = 'text-2xl font-black tracking-wider text-red-500 mb-1';
+          desc.innerText = '次元核心失守，請調整陣容配置後重試！';
+          icon.innerText = '💥';
+          icon.className = 'w-16 h-16 rounded-full bg-red-950 border border-red-500 flex items-center justify-center text-3xl mb-3 shadow-[0_0_20px_rgba(239,68,68,0.5)]';
+          starsContainer.innerHTML = '☆☆☆';
+          nextBtn.classList.add('hidden');
+        }
+
+        document.getElementById('statKills').innerText = this.kills;
+        document.getElementById('statHp').innerText = this.baseHp;
+        document.getElementById('statScore').innerText = this.score;
+      }
+
+      loop() {
+        const step = () => {
+          if (!this.isPaused && !this.isOver) {
+            const dt = (1 / 60) * this.gameSpeed;
+            this.update(dt);
+          }
+          this.render();
+          requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      }
+
+      update(dt) {
+        if (this.dp < 99) {
+          this.dp = Math.min(99, this.dp + dt * 1.5);
+          document.getElementById('dpText').innerText = Math.floor(this.dp);
+        }
+
+        if (this.waveInProgress) {
+          this.waveTimer += dt * 60;
+          for (let i = this.spawnQueue.length - 1; i >= 0; i--) {
+            const item = this.spawnQueue[i];
+            if (this.waveTimer >= item.delay) {
+              this.enemies.push(new Enemy(item.type, this));
+              this.spawnQueue.splice(i, 1);
+            }
+          }
+          if (this.spawnQueue.length === 0 && this.enemies.length === 0) {
+            if (this.wave < this.maxWave) {
+              this.startWave(this.wave + 1);
+            } else {
+              this.endGame(true);
+            }
+          }
+        }
+
+        this.towers.forEach(t => t.update(dt));
+        this.enemies = this.enemies.filter(e => {
+          if (e.hp <= 0) return false;
+          return e.update(dt);
+        });
+        this.projectiles = this.projectiles.filter(p => p.update(dt));
+        this.particles = this.particles.filter(p => p.update());
+
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+          const ft = this.floatingTexts[i];
+          ft.y += ft.vy;
+          ft.alpha -= 1 / ft.life;
+          if (ft.alpha <= 0) this.floatingTexts.splice(i, 1);
+        }
+      }
+
+      render() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        if (!this.tileW || !this.tileH) return;
+
+        for (let r = 0; r < this.rows; r++) {
+          for (let c = 0; c < this.cols; c++) {
+            const isRoad = this.isTileOnRoad(c, r);
+            ctx.fillStyle = isRoad ? this.stageConfig.roadColor : this.stageConfig.bgColor;
+            ctx.fillRect(c * this.tileW, r * this.tileH, this.tileW, this.tileH);
+
+            ctx.strokeStyle = isRoad ? 'rgba(56, 189, 248, 0.22)' : 'rgba(255, 255, 255, 0.04)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(c * this.tileW, r * this.tileH, this.tileW, this.tileH);
+          }
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        this.stageConfig.gridPath.forEach((pt, i) => {
+          const px = pt.x * this.tileW + this.tileW / 2;
+          const py = pt.y * this.tileH + this.tileH / 2;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        });
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.restore();
+
+        const path = this.stageConfig.gridPath;
+        const endPt = path[path.length - 1];
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(endPt.x * this.tileW + this.tileW / 2, endPt.y * this.tileH + this.tileH / 2, 22, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        this.enemies.forEach(e => e.draw(ctx));
+        this.towers.forEach(t => t.draw(ctx));
+        this.projectiles.forEach(p => p.draw(ctx));
+        this.particles.forEach(p => p.draw(ctx));
+
+        this.floatingTexts.forEach(ft => {
+          ctx.save();
+          ctx.globalAlpha = ft.alpha;
+          ctx.font = ft.isCrit ? '900 16px Chakra Petch' : '700 13px Chakra Petch';
+          ctx.fillStyle = ft.color;
+          ctx.shadowColor = '#000';
+          ctx.shadowBlur = 4;
+          ctx.fillText(ft.text, ft.x, ft.y);
+          ctx.restore();
+        });
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new TowerDefense();
+    });
+  </script>
+</body>
+</html>
