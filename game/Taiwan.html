@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台海關鍵基礎設施防護推演 - 戰略兵棋模擬</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #05080f;
+      color: #e2e8f0;
+      overflow: hidden;
+      user-select: none;
+    }
+    .mono {
+      font-family: 'Share Tech Mono', monospace;
+    }
+    .crt-overlay {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+    .panel-glass {
+      background: rgba(10, 17, 30, 0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+    @keyframes blinkRed {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .alert-blink {
+      animation: blinkRed 1s infinite;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+  <!-- 頂部戰情室狀態列 -->
+  <header class="h-14 px-4 panel-glass border-b border-cyan-900/60 flex items-center justify-between z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-3 h-3 rounded-full bg-red-500 alert-blink"></div>
+      <h1 class="text-base sm:text-lg font-black tracking-wider text-cyan-300">
+        台海防衛與關鍵基礎設施防護推演 <span class="text-xs font-normal text-slate-400 hidden sm:inline">| 系統性癱瘓風險評估模擬</span>
+      </h1>
+    </div>
+
+    <div class="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm">
+      <div class="flex items-center gap-2">
+        <span class="text-slate-400">作戰資源(CP):</span>
+        <span id="cpDisplay" class="mono text-lg font-bold text-amber-400">150</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-slate-400">台灣社會運作度:</span>
+        <span id="stabilityDisplay" class="mono text-lg font-bold text-emerald-400">100%</span>
+      </div>
+      <button id="btnReset" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold transition">
+        重置推演
+      </button>
+    </div>
+  </header>
+
+  <!-- 主戰場區域 -->
+  <div class="flex-1 flex relative overflow-hidden">
+    
+    <!-- 左側：進攻方兵力部署面板 -->
+    <aside class="w-64 sm:w-72 panel-glass border-r border-cyan-900/50 p-3 flex flex-col justify-between z-10 overflow-y-auto">
+      <div>
+        <div class="text-xs font-bold text-red-400 tracking-widest uppercase mb-2 border-b border-red-900/50 pb-1">
+          進攻方兵力投射 (點擊選擇後於海峽左側部署)
+        </div>
+
+        <div class="space-y-2.5" id="unitCards">
+          <!-- 戰機 -->
+          <div class="unit-btn p-2.5 rounded-lg bg-slate-900/90 border border-slate-700 hover:border-red-400 cursor-pointer transition" data-unit="fighter">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-sm text-white">✈️ 殲-20 隱形戰機編隊</span>
+              <span class="mono text-xs font-bold text-amber-400">30 CP</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">高速突防，優先空襲雷達站、機場與防空陣地。</p>
+          </div>
+
+          <!-- 彈道飛彈 -->
+          <div class="unit-btn p-2.5 rounded-lg bg-slate-900/90 border border-slate-700 hover:border-red-400 cursor-pointer transition" data-unit="missile">
+            <div class="font-bold text-sm text-white flex justify-between items-center">
+              <span>🚀 東風彈道飛彈齊射</span>
+              <span class="mono text-xs font-bold text-amber-400">45 CP</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">極高速精準打擊，直接點選台灣目標設施進行飽和攻擊。</p>
+          </div>
+
+          <!-- 巡航艦 -->
+          <div class="unit-btn p-2.5 rounded-lg bg-slate-900/90 border border-slate-700 hover:border-red-400 cursor-pointer transition" data-unit="cruiser">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-sm text-white">🚢 055型 萬噸驅逐艦</span>
+              <span class="mono text-xs font-bold text-amber-400">50 CP</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">封鎖海峽並發射長劍巡弋飛彈，持續壓制沿海港口與電廠。</p>
+          </div>
+
+          <!-- 兩棲坦克 -->
+          <div class="unit-btn p-2.5 rounded-lg bg-slate-900/90 border border-slate-700 hover:border-red-400 cursor-pointer transition" data-unit="tank">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-sm text-white">🚜 05式 兩棲裝甲突擊群</span>
+              <span class="mono text-xs font-bold text-amber-400">35 CP</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">泛水搶灘登陸，登陸後直接推進佔領城市與關鍵設施。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 p-2.5 rounded bg-amber-950/30 border border-amber-500/30 text-[11px] text-amber-200/90 leading-relaxed">
+        <strong class="text-amber-400">💡 兵推警世觀察點：</strong><br>
+        現代戰爭不需全面佔領全島，只要癱瘓「電力、通訊、能源、金融」四大命脈，社會機能便會迅速停擺。請觀察摧毀不同設施後的連鎖反應。
+      </div>
+    </aside>
+
+    <!-- 中央：Canvas 戰場地圖 -->
+    <main class="flex-1 relative bg-[#040914]">
+      <canvas id="warCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+      <div class="crt-overlay absolute inset-0"></div>
+
+      <!-- 動態系統癱瘓警世橫幅 -->
+      <div id="paralysisBanner" class="absolute top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-xl bg-red-950/90 border-2 border-red-500 rounded-xl p-3.5 shadow-[0_0_30px_rgba(239,68,68,0.6)] hidden z-30 transition-all">
+        <div class="flex items-center gap-2 text-red-400 font-black text-sm tracking-wider">
+          <span>⚠️ 關鍵基礎設施遭破壞 — 系統功能癱瘓警告</span>
+        </div>
+        <div id="bannerTitle" class="text-base sm:text-lg font-black text-white mt-1"></div>
+        <div id="bannerDesc" class="text-xs text-red-200 mt-1 leading-relaxed"></div>
+      </div>
+
+      <!-- 操作提示浮標 -->
+      <div id="deployHint" class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/40 text-xs text-cyan-300 pointer-events-none">
+        請在左側選擇進攻兵器，並點擊海峽左側海域部署（飛彈可直接點擊台灣目標）
+      </div>
+    </main>
+
+    <!-- 右側：台灣關鍵基礎設施狀態與癱瘓報告 -->
+    <aside class="w-72 sm:w-80 panel-glass border-l border-cyan-900/50 p-3 flex flex-col z-10 overflow-y-auto">
+      <div class="text-xs font-bold text-cyan-400 tracking-widest uppercase mb-2 border-b border-cyan-900/50 pb-1">
+        台灣關鍵基礎設施與社會機能監控
+      </div>
+
+      <div id="infraStatusList" class="space-y-2 flex-1 overflow-y-auto pr-1">
+        <!-- 由 JS 動態生成設施狀態卡 -->
+      </div>
+
+      <!-- 戰損日誌 -->
+      <div class="mt-3 pt-2 border-t border-slate-800">
+        <div class="text-[11px] font-bold text-slate-400 mb-1">即時戰情與系統影響日誌</div>
+        <div id="eventLog" class="h-32 overflow-y-auto bg-slate-950/80 rounded p-2 text-[11px] font-mono space-y-1 text-slate-300 border border-slate-800">
+          <div class="text-cyan-400">[系統] 台灣本島防空與岸防雷達網運作正常。</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 推演總結彈窗 -->
+  <div id="endModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="max-w-lg w-full panel-glass rounded-2xl p-6 border-2 border-red-500/50 shadow-2xl">
+      <h2 class="text-2xl font-black text-red-400 mb-2">⚠️ 台灣核心機能全面癱瘓</h2>
+      <p class="text-xs text-slate-300 leading-relaxed mb-4">
+        在本次兵棋推演中，多項關鍵基礎設施遭到摧毀，導致全島陷入斷電、斷網、能源枯竭與指揮失靈。這顯示了在現代不對稱作戰中，強化基礎設施備援（分散式電網、低軌衛星通訊、戰備儲油）與防空反導能力對台灣防衛的決定性意義。
+      </p>
+      <div id="endSummaryList" class="bg-slate-900/90 rounded-xl p-3 border border-slate-700 text-xs space-y-1.5 mb-5 max-h-48 overflow-y-auto"></div>
+      <button onclick="location.reload()" class="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-black tracking-wider transition">
+        重新進行防衛推演
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('warCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 遊戲核心狀態
+    let cp = 150;
+    let selectedUnit = null;
+    let isPowerOutage = false; // 變電所被毀導致全台停電狀態
+    let isCommsDown = false;   // 海底電纜被毀導致通訊中斷
+    let gameEnded = false;
+
+    const units = [];
+    const projectiles = [];
+    const particles = [];
+
+    // 台灣本島簡化多邊形輪廓 (比例座標 0~1)
+    const taiwanPolygon = [
+      { x: 0.74, y: 0.14 }, // 富貴角
+      { x: 0.80, y: 0.19 }, // 三貂角
+      { x: 0.78, y: 0.35 }, // 花蓮北
+      { x: 0.74, y: 0.58 }, // 台東
+      { x: 0.69, y: 0.86 }, // 鵝鑾鼻
+      { x: 0.65, y: 0.84 }, // 楓港
+      { x: 0.61, y: 0.68 }, // 高雄/台南
+      { x: 0.59, y: 0.50 }, // 雲林/嘉義
+      { x: 0.62, y: 0.34 }, // 台中/苗栗
+      { x: 0.67, y: 0.20 }  // 新竹/桃園
+    ];
+
+    // 台灣關鍵基礎設施節點
+    const infrastructures = [
+      {
+        id: 'taipei', name: '台北政經與指管中樞', rx: 0.74, ry: 0.18, hp: 100, maxHp: 100, destroyed: false,
+        impactTitle: '【政經與軍事指揮系統癱瘓】',
+        impactDesc: '中央政府指管中心與金融結算系統中斷，全台行政指揮陷入混亂，防空部隊失去統一調度能力（防空射速下降50%）。',
+        weight: 25
+      },
+      {
+        id: 'taoyuan', name: '桃園國際機場與空軍基地', rx: 0.69, ry: 0.21, hp: 80, maxHp: 80, destroyed: false,
+        impactTitle: '【空中門戶與制空支援癱瘓】',
+        impactDesc: '跑道與機堡遭摧毀，國際物資空運與撤僑通道中斷，北部空軍戰機無法起降攔截。',
+        weight: 15
+      },
+      {
+        id: 'hsinchu', name: '新竹科學園區 (半導體命脈)', rx: 0.66, ry: 0.26, hp: 80, maxHp: 80, destroyed: false,
+        impactTitle: '【全球半導體供應鏈與經濟命脈斷裂】',
+        impactDesc: '晶圓代工產線停擺，造成全球科技產業震盪與台灣核心經濟產值歸零。',
+        weight: 15
+      },
+      {
+        id: 'taichung', name: '台中超高壓變電所與電廠', rx: 0.63, ry: 0.39, hp: 90, maxHp: 90, destroyed: false,
+        impactTitle: '【全台大停電 — 民生與防空雷達癱瘓】',
+        impactDesc: '南北超高壓電網解列，全台陷入大停電！自來水加壓、醫院維生系統與大型預警雷達失去電力。',
+        weight: 20
+      },
+      {
+        id: 'kaohsiung', name: '高雄港與永安液化天然氣站', rx: 0.63, ry: 0.72, hp: 90, maxHp: 90, destroyed: false,
+        impactTitle: '【海運補給與能源進口完全癱瘓】',
+        impactDesc: '天然氣接收站與貨櫃樞紐被毀，台灣戰備能源儲量急劇耗盡，海軍艦艇失去後勤補給。',
+        weight: 15
+      },
+      {
+        id: 'fangshan', name: '屏東枋山海底電纜登陸站', rx: 0.67, ry: 0.81, hp: 70, maxHp: 70, destroyed: false,
+        impactTitle: '【對外網路與國際通訊完全孤立】',
+        impactDesc: '台灣聯外海底光纜全數切斷！全島成為「資訊孤島」，網路銀行、對外求援訊號與民心士氣受嚴重打擊。',
+        weight: 10
+      }
+    ];
+
+    // 台灣自動化防衛陣地 (防空/岸防)
+    const defenseBatteries = [
+      { name: '北部愛國者防空連', rx: 0.72, ry: 0.20, range: 140, cooldown: 0, maxCd: 70 },
+      { name: '中部天弓防空與岸防連', rx: 0.64, ry: 0.42, range: 150, cooldown: 0, maxCd: 75 },
+      { name: '南部雄風反艦與防空連', rx: 0.64, ry: 0.70, range: 150, cooldown: 0, maxCd: 75 }
+    ];
+
+    // 兵器規格定義
+    const UNIT_SPECS = {
+      fighter: { name: '殲-20戰機', cost: 30, speed: 2.3, hp: 45, dmg: 22, color: '#f87171', type: 'air', range: 90 },
+      missile: { name: '東風彈道飛彈', cost: 45, speed: 5.5, hp: 25, dmg: 55, color: '#fbbf24', type: 'missile', range: 10 },
+      cruiser: { name: '055型驅逐艦', cost: 50, speed: 0.55, hp: 160, dmg: 18, color: '#38bdf8', type: 'sea', range: 220 },
+      tank:    { name: '05式兩棲裝甲群', cost: 35, speed: 0.75, hp: 110, dmg: 30, color: '#a3e635', type: 'land', range: 25 }
+    };
+
+    function resize() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // 初始化右側設施面板
+    function renderInfraPanel() {
+      const container = document.getElementById('infraStatusList');
+      container.innerHTML = '';
+      let totalStability = 100;
+
+      infrastructures.forEach(inf => {
+        if (inf.destroyed) totalStability -= inf.weight;
+        const hpPct = Math.max(0, Math.round((inf.hp / inf.maxHp) * 100));
+        const card = document.createElement('div');
+        card.className = `p-2.5 rounded-lg border transition ${
+          inf.destroyed 
+            ? 'bg-red-950/60 border-red-500/70' 
+            : 'bg-slate-900/80 border-slate-700'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center text-xs font-bold">
+            <span class="${inf.destroyed ? 'text-red-400 line-through' : 'text-slate-100'}">${inf.name}</span>
+            <span class="mono ${inf.destroyed ? 'text-red-500 font-black' : 'text-emerald-400'}">
+              ${inf.destroyed ? '已癱瘓' : hpPct + '%'}
+            </span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-1.5">
+            <div class="h-full ${inf.destroyed ? 'bg-red-600' : 'bg-emerald-500'}" style="width: ${hpPct}%"></div>
+          </div>
+          ${inf.destroyed ? `<div class="text-[11px] text-red-300 mt-1.5 font-bold">${inf.impactTitle}</div>` : ''}
+        `;
+        container.appendChild(card);
+      });
+
+      const stabEl = document.getElementById('stabilityDisplay');
+      stabEl.innerText = `${Math.max(0, totalStability)}%`;
+      if (totalStability <= 30) stabEl.className = 'mono text-lg font-bold text-red-500 alert-blink';
+      else if (totalStability <= 65) stabEl.className = 'mono text-lg font-bold text-amber-400';
+
+      if (totalStability <= 0 && !gameEnded) {
+        triggerGameOver();
+      }
+    }
+
+    function addLog(msg, colorClass = 'text-slate-300') {
+      const log = document.getElementById('eventLog');
+      const div = document.createElement('div');
+      div.className = colorClass;
+      const now = new Date();
+      const timeStr = `${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      div.innerText = `[${timeStr}] ${msg}`;
+      log.prepend(div);
+    }
+
+    function showParalysisAlert(inf) {
+      const banner = document.getElementById('paralysisBanner');
+      document.getElementById('bannerTitle').innerText = `${inf.name} 遭摧毀 — ${inf.impactTitle}`;
+      document.getElementById('bannerDesc').innerText = inf.impactDesc;
+      banner.classList.remove('hidden');
+
+      if (inf.id === 'taichung') isPowerOutage = true;
+      if (inf.id === 'fangshan') isCommsDown = true;
+
+      clearTimeout(banner.hideTimer);
+      banner.hideTimer = setTimeout(() => {
+        banner.classList.add('hidden');
+      }, 6500);
+    }
+
+    function triggerGameOver() {
+      gameEnded = true;
+      const modal = document.getElementById('endModal');
+      const list = document.getElementById('endSummaryList');
+      list.innerHTML = infrastructures.map(inf => `
+        <div class="border-b border-slate-800 pb-1">
+          <div class="font-bold text-red-400">✖ ${inf.name}：${inf.impactTitle}</div>
+          <div class="text-slate-400 text-[11px]">${inf.impactDesc}</div>
+        </div>
+      `).join('');
+      modal.classList.remove('hidden');
+    }
+
+    // 選擇兵力卡片
+    document.querySelectorAll('.unit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('border-red-500', 'bg-red-950/30'));
+        const uType = btn.dataset.unit;
+        if (selectedUnit === uType) {
+          selectedUnit = null;
+          document.getElementById('deployHint').innerText = '請在左側選擇進攻兵器，並點擊海峽左側海域部署';
+        } else {
+          selectedUnit = uType;
+          btn.classList.add('border-red-500', 'bg-red-950/30');
+          document.getElementById('deployHint').innerText = uType === 'missile'
+            ? '【彈道飛彈模式】請直接點擊台灣本島上的關鍵設施發射！'
+            : `已選擇【${UNIT_SPECS[uType].name}】，請點擊海峽西側（畫面左半部）進行部署`;
+        }
+      });
+    });
+
+    document.getElementById('btnReset').addEventListener('click', () => location.reload());
+
+    // 點擊地圖部署單位
+    canvas.addEventListener('click', (e) => {
+      if (!selectedUnit || gameEnded) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const spec = UNIT_SPECS[selectedUnit];
+
+      if (cp < spec.cost) {
+        addLog(`作戰資源不足！需要 ${spec.cost} CP。`, 'text-amber-400');
+        return;
+      }
+
+      if (selectedUnit === 'missile') {
+        // 尋找最近的設施作為飛彈目標
+        let targetInf = null;
+        let minDist = 9999;
+        infrastructures.forEach(inf => {
+          const ix = inf.rx * canvas.width;
+          const iy = inf.ry * canvas.height;
+          const d = Math.hypot(mx - ix, my - iy);
+          if (d < minDist) {
+            minDist = d;
+            targetInf = inf;
+          }
+        });
+
+        if (targetInf && minDist < 120) {
+          cp -= spec.cost;
+          document.getElementById('cpDisplay').innerText = Math.floor(cp);
+          // 發射多枚彈道飛彈形成飽和打擊
+          for (let i = 0; i < 3; i++) {
+            units.push({
+              unitType: 'missile',
+              x: canvas.width * 0.12,
+              y: my + (i - 1) * 25,
+              target: targetInf,
+              hp: spec.hp,
+              maxHp: spec.hp,
+              speed: spec.speed,
+              dmg: spec.dmg / 2.2,
+              color: spec.color
+            });
+          }
+          addLog(`發射東風彈道飛彈齊射，目標：【${targetInf.name}】！`, 'text-amber-300');
+        } else {
+          addLog('請點擊台灣本島上的關鍵設施圖示進行飛彈鎖定！', 'text-amber-400');
+        }
+        return;
+      }
+
+      // 限制部署在海峽西側 (x < 0.45)
+      if (mx > canvas.width * 0.45) {
+        addLog('海空與兩棲部隊必須從海峽西側（左半部海域）集結出發！', 'text-amber-400');
+        return;
+      }
+
+      cp -= spec.cost;
+      document.getElementById('cpDisplay').innerText = Math.floor(cp);
+
+      // 找尋尚未被摧毀的設施作為目標
+      const aliveInfras = infrastructures.filter(i => !i.destroyed);
+      const target = aliveInfras.length > 0
+        ? aliveInfras[Math.floor(Math.random() * aliveInfras.length)]
+        : infrastructures[0];
+
+      units.push({
+        unitType: selectedUnit,
+        x: mx,
+        y: my,
+        target: target,
+        hp: spec.hp,
+        maxHp: spec.hp,
+        speed: spec.speed,
+        dmg: spec.dmg,
+        color: spec.color,
+        range: spec.range,
+        attackCd: 0
+      });
+
+      addLog(`部署【${spec.name}】進入台灣海峽，目標指向【${target.name}】。`, 'text-red-300');
+    });
+
+    // 繪製台灣本島與地形
+    function drawMap() {
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // 海峽背景網格
+      ctx.strokeStyle = isPowerOutage ? 'rgba(239, 68, 68, 0.06)' : 'rgba(56, 189, 248, 0.08)';
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      for (let x = 0; x < w; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y < h; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      // 海峽中線標示
+      ctx.save();
+      ctx.setLineDash([8, 8]);
+      ctx.strokeStyle = 'rgba(248, 113, 113, 0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.46, 0);
+      ctx.lineTo(w * 0.46, h);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(248, 113, 113, 0.5)';
+      ctx.font = '12px Noto Sans TC';
+      ctx.fillText('台 灣 海 峽 中 線', w * 0.46 + 8, 24);
+      ctx.restore();
+
+      // 繪製對岸集結區提示
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.06)';
+      ctx.fillRect(0, 0, w * 0.45, h);
+      ctx.fillStyle = 'rgba(248, 113, 113, 0.4)';
+      ctx.font = 'bold 13px Noto Sans TC';
+      ctx.fillText('◀ 進攻方海空集結部署區', 16, h - 18);
+
+      // 繪製台灣本島多邊形
+      ctx.save();
+      ctx.beginPath();
+      taiwanPolygon.forEach((pt, idx) => {
+        const px = pt.x * w;
+        const py = pt.y * h;
+        if (idx === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+
+      // 若變電所被毀，台灣本島變暗（模擬全台大停電）
+      ctx.fillStyle = isPowerOutage ? '#090d14' : '#0f292e';
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = isPowerOutage ? '#ef4444' : '#2dd4bf';
+      ctx.shadowColor = isPowerOutage ? '#ef4444' : '#14b8a6';
+      ctx.shadowBlur = isPowerOutage ? 10 : 18;
+      ctx.stroke();
+      ctx.restore();
+
+      // 停電狀態浮水印
+      if (isPowerOutage) {
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+        ctx.font = 'bold 14px Noto Sans TC';
+        ctx.fillText('⚡ 全島電網崩潰：大停電狀態', w * 0.58, 30);
+      }
+      if (isCommsDown) {
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.85)';
+        ctx.font = 'bold 14px Noto Sans TC';
+        ctx.fillText('📡 海底電纜斷裂：對外通訊孤島', w * 0.58, 52);
+      }
+
+      // 繪製台灣防空/岸防陣地
+      defenseBatteries.forEach(bat => {
+        const bx = bat.rx * w;
+        const by = bat.ry * h;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(bx, by, isPowerOutage ? bat.range * 0.6 : bat.range, 0, Math.PI * 2);
+        ctx.strokeStyle = isPowerOutage ? 'rgba(239, 68, 68, 0.15)' : 'rgba(56, 189, 248, 0.18)';
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(bx, by, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // 繪製關鍵基礎設施節點
+      infrastructures.forEach(inf => {
+        const ix = inf.rx * w;
+        const iy = inf.ry * h;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(ix, iy, inf.destroyed ? 8 : 10, 0, Math.PI * 2);
+        ctx.fillStyle = inf.destroyed ? '#dc2626' : '#10b981';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        // 標籤文字
+        ctx.font = 'bold 12px Noto Sans TC';
+        ctx.fillStyle = inf.destroyed ? '#f87171' : '#f1f5f9';
+        ctx.fillText(inf.name, ix + 14, iy + 4);
+
+        if (inf.destroyed) {
+          ctx.font = 'bold 10px Noto Sans TC';
+          ctx.fillStyle = '#fca5a5';
+          ctx.fillText(inf.impactTitle, ix + 14, iy + 18);
+        }
+        ctx.restore();
+      });
+    }
+
+    function spawnExplosion(x, y, color = '#ef4444', count = 14) {
+      for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 1 + Math.random() * 3.5;
+        particles.push({
+          x, y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          life: 25 + Math.random() * 15,
+          maxLife: 40,
+          color
+        });
+      }
+    }
+
+    // 主迴圈更新與繪製
+    function update() {
+      if (!gameEnded && cp < 200) {
+        cp += 0.08;
+        document.getElementById('cpDisplay').innerText = Math.floor(cp);
+      }
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const taipeiDestroyed = infrastructures.find(i => i.id === 'taipei').destroyed;
+
+      // 1. 台灣防衛陣地自動攔截
+      defenseBatteries.forEach(bat => {
+        if (bat.cooldown > 0) {
+          bat.cooldown--;
+          return;
+        }
+        const bx = bat.rx * w;
+        const by = bat.ry * h;
+        const effRange = isPowerOutage ? bat.range * 0.6 : bat.range;
+
+        const targetUnit = units.find(u => Math.hypot(u.x - bx, u.y - by) <= effRange);
+        if (targetUnit) {
+          projectiles.push({
+            x: bx, y: by,
+            target: targetUnit,
+            speed: 6.5,
+            dmg: 28,
+            color: '#38bdf8',
+            isDefense: true
+          });
+          bat.cooldown = taipeiDestroyed ? bat.maxCd * 1.6 : bat.maxCd;
+        }
+      });
+
+      // 2. 更新進攻方單位
+      for (let i = units.length - 1; i >= 0; i--) {
+        const u = units[i];
+        if (u.hp <= 0) {
+          spawnExplosion(u.x, u.y, u.color, 12);
+          units.splice(i, 1);
+          continue;
+        }
+
+        // 若原目標已毀，切換下一個未摧毀設施
+        if (u.target.destroyed) {
+          const next = infrastructures.find(inf => !inf.destroyed);
+          if (next) u.target = next;
+        }
+
+        const tx = u.target.rx * w;
+        const ty = u.target.ry * h;
+        const dx = tx - u.x;
+        const dy = ty - u.y;
+        const dist = Math.hypot(dx, dy);
+
+        // 055驅逐艦停在海峽中線附近進行遠程巡弋飛彈打擊
+        if (u.unitType === 'cruiser' && u.x >= w * 0.44) {
+          u.attackCd = (u.attackCd || 0) - 1;
+          if (u.attackCd <= 0 && !u.target.destroyed) {
+            projectiles.push({
+              x: u.x, y: u.y,
+              targetInfra: u.target,
+              speed: 4.2,
+              dmg: u.dmg,
+              color: '#38bdf8',
+              isDefense: false
+            });
+            u.attackCd = 110;
+          }
+          continue;
+        }
+
+        // 移動與攻擊判定
+        if (dist > (u.range || 15)) {
+          u.x += (dx / dist) * u.speed;
+          u.y += (dy / dist) * u.speed;
+        } else {
+          // 飛彈直接撞擊引爆
+          if (u.unitType === 'missile') {
+            damageInfra(u.target, u.dmg);
+            spawnExplosion(tx, ty, '#fbbf24', 18);
+            units.splice(i, 1);
+            continue;
+          }
+          // 戰機與坦克持續攻擊設施
+          u.attackCd = (u.attackCd || 0) - 1;
+          if (u.attackCd <= 0 && !u.target.destroyed) {
+            damageInfra(u.target, u.dmg);
+            spawnExplosion(tx, ty, u.color, 8);
+            u.attackCd = 55;
+          }
+        }
+      }
+
+      // 3. 更新飛彈/防空彈藥
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        const p = projectiles[i];
+        if (p.isDefense) {
+          if (!units.includes(p.target)) {
+            projectiles.splice(i, 1);
+            continue;
+          }
+          const dx = p.target.x - p.x;
+          const dy = p.target.y - p.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < p.speed) {
+            p.target.hp -= p.dmg;
+            spawnExplosion(p.x, p.y, '#38bdf8', 6);
+            projectiles.splice(i, 1);
+          } else {
+            p.x += (dx / dist) * p.speed;
+            p.y += (dy / dist) * p.speed;
+          }
+        } else {
+          const tx = p.targetInfra.rx * w;
+          const ty = p.targetInfra.ry * h;
+          const dx = tx - p.x;
+          const dy = ty - p.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < p.speed) {
+            damageInfra(p.targetInfra, p.dmg);
+            spawnExplosion(tx, ty, '#f87171', 12);
+            projectiles.splice(i, 1);
+          } else {
+            p.x += (dx / dist) * p.speed;
+            p.y += (dy / dist) * p.speed;
+          }
+        }
+      }
+
+      // 4. 更新粒子特效
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.life--;
+        if (pt.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function damageInfra(inf, dmg) {
+      if (inf.destroyed) return;
+      inf.hp = Math.max(0, inf.hp - dmg);
+      if (inf.hp <= 0) {
+        inf.destroyed = true;
+        addLog(`警報！【${inf.name}】已被摧毀！${inf.impactTitle}`, 'text-red-400 font-bold');
+        showParalysisAlert(inf);
+      }
+      renderInfraPanel();
+    }
+
+    function drawEntities() {
+      // 繪製單位
+      units.forEach(u => {
+        ctx.save();
+        ctx.translate(u.x, u.y);
+        ctx.fillStyle = u.color;
+        ctx.shadowColor = u.color;
+        ctx.shadowBlur = 8;
+
+        if (u.unitType === 'fighter') {
+          ctx.beginPath();
+          ctx.moveTo(10, 0); ctx.lineTo(-8, -7); ctx.lineTo(-4, 0); ctx.lineTo(-8, 7);
+          ctx.closePath(); ctx.fill();
+        } else if (u.unitType === 'missile') {
+          ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+        } else if (u.unitType === 'cruiser') {
+          ctx.fillRect(-14, -5, 28, 10);
+        } else if (u.unitType === 'tank') {
+          ctx.fillRect(-8, -6, 16, 12);
+        }
+        ctx.restore();
+
+        // 血條
+        if (u.unitType !== 'missile') {
+          const hpRatio = Math.max(0, u.hp / u.maxHp);
+          ctx.fillStyle = 'rgba(0,0,0,0.7)';
+          ctx.fillRect(u.x - 12, u.y - 12, 24, 3);
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(u.x - 12, u.y - 12, 24 * hpRatio, 3);
+        }
+      });
+
+      // 繪製飛彈軌跡
+      projectiles.forEach(p => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // 繪製爆炸粒子
+      particles.forEach(pt => {
+        ctx.save();
+        ctx.globalAlpha = pt.life / pt.maxLife;
+        ctx.fillStyle = pt.color;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawMap();
+      update();
+      drawEntities();
+      requestAnimationFrame(loop);
+    }
+
+    renderInfraPanel();
+    loop();
+  </script>
+</body>
+</html>
