@@ -62,13 +62,34 @@ hr.m-0 {
 /* ===================================================
 4. Bento Grid 便當盒風格作品集樣式
 =================================================== */
-.bento-grid {
-    /* 電腦版分 3 欄，可依需求改成 2 或 4 */
-    column-count: 3; 
-    column-gap: 20px;
+/* 分區標題樣式 */
+.portfolio-category {
+    padding-top: 10px;
 }
 
-/* 平板與手機自動減少欄數 */
+.category-header {
+    border-left: 4px solid #bd5d38; /* 可依你網站的主色系調整此顏色 */
+    padding-left: 16px;
+}
+
+.category-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #343a40;
+}
+
+.category-desc {
+    font-size: 0.95rem;
+    margin-bottom: 0;
+}
+
+/* 瀑布流網格設定 */
+.bento-grid {
+    column-count: 3; 
+    column-gap: 24px;
+}
+
 @media (max-width: 992px) {
     .bento-grid {
         column-count: 2;
@@ -80,28 +101,76 @@ hr.m-0 {
     }
 }
 
+/* 單張作品卡片 */
 .bento-item {
-    break-inside: avoid; /* 防止單張圖片被切斷到下一欄 */
-    margin-bottom: 20px; /* 卡片之間的上下間距 */
+    break-inside: avoid;
+    margin-bottom: 24px;
     background-color: #ffffff;
     border: 1px solid #e9ecef;
     border-radius: 12px;
-    padding: 0;
     overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    display: flex;
+    flex-direction: column;
 }
 
 .bento-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.08);
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* 寬度填滿該欄，高度自動依原圖比例延伸 */
-.bento-media,
-.bento-item img,
-.bento-item video {
+/* 媒體容器 */
+.media-wrapper {
+    width: 100%;
+    overflow: hidden;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.bento-media {
     width: 100%;
     height: auto;
     display: block;
+    transition: transform 0.3s ease;
+}
+
+/* 滑鼠移過時圖片微微放大，增加精緻感 */
+.bento-item:hover .bento-media {
+    transform: scale(1.02);
+}
+
+/* 統一文字介紹區塊 */
+.bento-info {
+    padding: 16px 18px;
+}
+
+.work-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 6px;
+}
+
+.work-desc {
+    font-size: 0.88rem;
+    color: #6c757d;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+/* 標籤膠囊樣式 */
+.work-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.work-tags .tag {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #495057;
+    background-color: #f1f3f5;
+    padding: 3px 10px;
+    border-radius: 20px;
 }
